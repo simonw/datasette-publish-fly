@@ -118,8 +118,14 @@ def publish_subcommand(publish):
 def existing_apps():
     process = run(["flyctl", "apps", "list"], capture_output=True)
     output = process.stdout.decode("utf8")
-    lines = [l.strip() for l in output.split("\n")]
-    # First line should begin NAME
-    assert lines[0].startswith("NAME")
-    apps = [l.strip().split()[0] for l in lines[1:] if l.strip()]
+    all_lines = [l.strip() for l in output.split("\n")]
+    # Skip lines until we find the NAME line
+    lines = []
+    collect = False
+    for line in all_lines:
+        if collect:
+            lines.append(line)
+        elif line.startswith("NAME"):
+            collect = True
+    apps = [l.strip().split()[0] for l in lines if l.strip()]
     return apps

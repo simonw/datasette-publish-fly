@@ -2,6 +2,7 @@ from click.testing import CliRunner
 from datasette import cli
 from unittest import mock
 import subprocess
+import pytest
 
 
 class FakeCompletedProcess:
@@ -47,15 +48,19 @@ def test_publish_now_app_name_not_available(mock_run, mock_which):
         ] == mock_run.call_args_list
 
 
+@pytest.mark.parametrize(
+    "flyctl_apps_list", [b"  NAME", b"Update available 0.0.108 -> 0.0.109\n  NAME",]
+)
 @mock.patch("shutil.which")
 @mock.patch("datasette_publish_fly.run")
-def test_publish_now(mock_run, mock_which):
+def test_publish_now(mock_run, mock_which, flyctl_apps_list):
     mock_which.return_value = True
     runner = CliRunner()
 
     def run_side_effect(*args, **kwargs):
         if args == (["flyctl", "apps", "list"],):
-            return FakeCompletedProcess(b"  NAME")
+            print(flyctl_apps_list)
+            return FakeCompletedProcess(flyctl_apps_list)
         else:
             print(args)
             return FakeCompletedProcess(b"", 0)
