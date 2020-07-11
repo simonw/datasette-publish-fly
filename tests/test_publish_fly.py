@@ -1,7 +1,7 @@
 from click.testing import CliRunner
 from datasette import cli
 from unittest import mock
-import subprocess
+from subprocess import PIPE
 import pytest
 
 
@@ -43,7 +43,7 @@ def test_publish_now_app_name_not_available(mock_run, mock_which):
         assert 1 == result.exit_code
         assert "Error: That app name is not available" in result.output
         assert [
-            mock.call(["flyctl", "apps", "list"], capture_output=True),
+            mock.call(["flyctl", "apps", "list"], stdout=PIPE, stderr=PIPE),
             mock.call(["flyctl", "apps", "create", "--name", "app"]),
         ] == mock_run.call_args_list
 
@@ -72,7 +72,7 @@ def test_publish_now(mock_run, mock_which, flyctl_apps_list):
         result = runner.invoke(cli.cli, ["publish", "fly", "test.db", "-a", "app"])
         assert 0 == result.exit_code
         assert [
-            mock.call(["flyctl", "apps", "list"], capture_output=True),
+            mock.call(["flyctl", "apps", "list"], stdout=PIPE, stderr=PIPE),
             mock.call(["flyctl", "apps", "create", "--name", "app"]),
             mock.call(["flyctl", "deploy", "--remote-only"]),
         ] == mock_run.call_args_list

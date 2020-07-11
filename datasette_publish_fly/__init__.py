@@ -4,7 +4,7 @@ from datasette.publish.common import (
     fail_if_publish_binary_not_installed,
 )
 from datasette.utils import temporary_docker_directory
-from subprocess import run
+from subprocess import run, PIPE
 import click
 
 FLY_TOML = """
@@ -118,7 +118,7 @@ def publish_subcommand(publish):
 
 
 def existing_apps():
-    process = run(["flyctl", "apps", "list"], capture_output=True)
+    process = run(["flyctl", "apps", "list"], stdout=PIPE, stderr=PIPE)
     output = process.stdout.decode("utf8")
     all_lines = [l.strip() for l in output.split("\n")]
     # Skip lines until we find the NAME line
