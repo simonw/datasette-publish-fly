@@ -1,3 +1,4 @@
+from sys import stdout
 from datasette import hookimpl
 from datasette.publish.common import (
     add_common_publish_arguments_and_options,
@@ -5,6 +6,7 @@ from datasette.publish.common import (
 )
 from datasette.utils import temporary_docker_directory
 from subprocess import run, PIPE
+import tempfile
 import click
 
 FLY_TOML = """
@@ -38,7 +40,10 @@ def publish_subcommand(publish):
     @add_common_publish_arguments_and_options
     @click.option("--spatialite", is_flag=True, help="Enable SpatialLite extension")
     @click.option(
-        "-a", "--app", help="Name of Fly app to deploy", required=True,
+        "-a",
+        "--app",
+        help="Name of Fly app to deploy",
+        required=True,
     )
     def fly(
         files,
@@ -108,13 +113,48 @@ def publish_subcommand(publish):
             apps = existing_apps()
             if app not in apps:
                 # Attempt to create the app
-                result = run(["flyctl", "apps", "create", "--name", app])
+                with tempfile.TemporaryDirectory() as tmpdirname:
+                    result = run(
+                        [
+                            "flyctl",
+                            "apps",
+                            "create",
+                            "--name",
+                            app,
+                            "--builder",
+                            "Docker",
+                            "--port",
+                            "8080",
+                        ],
+                        cwd=tmpdirname,
+                        stderr=PIPE,
+                        stdout=PIPE,
+                    )
                 if result.returncode:
-                    raise click.ClickException("That app name is not available")
-            else:
-                open("fly.toml", "w").write(FLY_TOML.format(app=app))
+                    raise click.ClickException(
+                        "Error calling 'flyctl apps create':\n\n{}".format(
+                            # Don't include Usage: - could be confused for usage
+                            # instructions for datasette publish fly
+                            result.stderr.decode("utf-8")
+                            .split("Usage:")[0]
+                            .strip()
+                        )
+                    )
+
+            open("fly.toml", "w").write(FLY_TOML.format(app=app))
             # Now deploy it
-            run(["flyctl", "deploy", "--remote-only"])
+            run(
+                [
+                    "flyctl",
+                    "deploy",
+                    ".",
+                    "--app",
+                    app,
+                    "--config",
+                    "fly.toml",
+                    "--remote-only",
+                ]
+            )
 
 
 def existing_apps():

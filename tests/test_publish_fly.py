@@ -6,8 +6,9 @@ import pytest
 
 
 class FakeCompletedProcess:
-    def __init__(self, stdout, returncode=0):
+    def __init__(self, stdout, stderr, returncode=0):
         self.stdout = stdout
+        self.stderr = stderr
         self.returncode = returncode
 
 
@@ -24,16 +25,16 @@ def test_publish_fly_requires_flyctl(mock_which):
 
 @mock.patch("shutil.which")
 @mock.patch("datasette_publish_fly.run")
-def test_publish_now_app_name_not_available(mock_run, mock_which):
+def test_publish_fly_app_name_not_available(mock_run, mock_which):
     mock_which.return_value = True
     runner = CliRunner()
 
     def run_side_effect(*args, **kwargs):
         if args == (["flyctl", "apps", "list"],):
-            return FakeCompletedProcess(b"  NAME")
+            return FakeCompletedProcess(b"  NAME", b"")
         else:
             print(args)
-            return FakeCompletedProcess(b"", 1)
+            return FakeCompletedProcess(b"", b"That app name is not available", 1)
 
     mock_run.side_effect = run_side_effect
 
@@ -41,26 +42,41 @@ def test_publish_now_app_name_not_available(mock_run, mock_which):
         open("test.db", "w").write("data")
         result = runner.invoke(cli.cli, ["publish", "fly", "test.db", "-a", "app"])
         assert 1 == result.exit_code
-        assert "Error: That app name is not available" in result.output
-        assert [
-            mock.call(["flyctl", "apps", "list"], stdout=PIPE, stderr=PIPE),
-            mock.call(["flyctl", "apps", "create", "--name", "app"]),
-        ] == mock_run.call_args_list
+        assert "That app name is not available" in result.output
+        apps_list_call, apps_create_call = mock_run.call_args_list
+        assert apps_list_call == mock.call(
+            ["flyctl", "apps", "list"], stdout=PIPE, stderr=PIPE
+        )
+        assert list(apps_create_call)[0][0] == [
+            "flyctl",
+            "apps",
+            "create",
+            "--name",
+            "app",
+            "--builder",
+            "Docker",
+            "--port",
+            "8080",
+        ]
 
 
 @pytest.mark.parametrize(
-    "flyctl_apps_list", [b"  NAME", b"Update available 0.0.108 -> 0.0.109\n  NAME",]
+    "flyctl_apps_list",
+    [
+        b"  NAME",
+        b"Update available 0.0.108 -> 0.0.109\n  NAME",
+    ],
 )
 @mock.patch("shutil.which")
 @mock.patch("datasette_publish_fly.run")
-def test_publish_now(mock_run, mock_which, flyctl_apps_list):
+def test_publish_fly(mock_run, mock_which, flyctl_apps_list):
     mock_which.return_value = True
     runner = CliRunner()
 
     def run_side_effect(*args, **kwargs):
         if args == (["flyctl", "apps", "list"],):
             print(flyctl_apps_list)
-            return FakeCompletedProcess(flyctl_apps_list)
+            return FakeCompletedProcess(flyctl_apps_list, b"")
         else:
             print(args)
             return FakeCompletedProcess(b"", 0)
@@ -70,9 +86,32 @@ def test_publish_now(mock_run, mock_which, flyctl_apps_list):
     with runner.isolated_filesystem():
         open("test.db", "w").write("data")
         result = runner.invoke(cli.cli, ["publish", "fly", "test.db", "-a", "app"])
-        assert 0 == result.exit_code
-        assert [
-            mock.call(["flyctl", "apps", "list"], stdout=PIPE, stderr=PIPE),
-            mock.call(["flyctl", "apps", "create", "--name", "app"]),
-            mock.call(["flyctl", "deploy", "--remote-only"]),
-        ] == mock_run.call_args_list
+        assert result.exit_code == 0
+
+        apps_list_call, apps_create_call, apps_deploy_call = mock_run.call_args_list
+        assert apps_list_call == mock.call(
+            ["flyctl", "apps", "list"], stdout=PIPE, stderr=PIPE
+        )
+        assert list(apps_create_call)[0][0] == [
+            "flyctl",
+            "apps",
+            "create",
+            "--name",
+            "app",
+            "--builder",
+            "Docker",
+            "--port",
+            "8080",
+        ]
+        assert apps_deploy_call == mock.call(
+            [
+                "flyctl",
+                "deploy",
+                ".",
+                "--app",
+                "app",
+                "--config",
+                "fly.toml",
+                "--remote-only",
+            ]
+        )
