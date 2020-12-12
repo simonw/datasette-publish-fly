@@ -1,7 +1,7 @@
 from setuptools import setup
 import os
 
-VERSION = "1.0"
+VERSION = "1.0.1"
 
 
 def get_long_description():
@@ -19,6 +19,11 @@ setup(
     long_description_content_type="text/markdown",
     author="Simon Willison",
     url="https://github.com/simonw/datasette-publish-fly",
+    project_urls={
+        "Issues": "https://github.com/simonw/datasette-publish-fly/issues",
+        "CI": "https://github.com/simonw/datasette-publish-fly/actions",
+        "Changelog": "https://github.com/simonw/datasette-publish-fly/releases",
+    },
     license="Apache License, Version 2.0",
     version=VERSION,
     packages=["datasette_publish_fly"],
