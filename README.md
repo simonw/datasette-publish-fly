@@ -1,8 +1,9 @@
 # datasette-publish-fly
 
 [![PyPI](https://img.shields.io/pypi/v/datasette-publish-fly.svg)](https://pypi.org/project/datasette-publish-fly/)
-[![CircleCI](https://circleci.com/gh/simonw/datasette-publish-fly.svg?style=svg)](https://circleci.com/gh/simonw/datasette-publish-fly)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/simonw/datasette-publish-fly/blob/master/LICENSE)
+[![Changelog](https://img.shields.io/github/v/release/simonw/datasette-publish-fly?include_prereleases&label=changelog)](https://github.com/simonw/datasette-publish-fly/releases)
+[![Tests](https://github.com/simonw/datasette-publish-fly/workflows/Test/badge.svg)](https://github.com/simonw/datasette-publish-fly/actions?query=workflow%3ATest)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/simonw/datasette-publish-fly/blob/main/LICENSE)
 
 Datasette plugin for publishing data using [Fly](https://fly.io/).
 
