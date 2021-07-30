@@ -8,6 +8,7 @@ from datasette.utils import temporary_docker_directory
 from subprocess import run, PIPE
 import tempfile
 import click
+import json
 
 FLY_TOML = """
 app = "{app}"
@@ -158,16 +159,6 @@ def publish_subcommand(publish):
 
 
 def existing_apps():
-    process = run(["flyctl", "apps", "list"], stdout=PIPE, stderr=PIPE)
+    process = run(["flyctl", "apps", "list", "--json"], stdout=PIPE, stderr=PIPE)
     output = process.stdout.decode("utf8")
-    all_lines = [l.strip() for l in output.split("\n")]
-    # Skip lines until we find the NAME line
-    lines = []
-    collect = False
-    for line in all_lines:
-        if collect:
-            lines.append(line)
-        elif line.startswith("NAME"):
-            collect = True
-    apps = [l.strip().split()[0] for l in lines if l.strip()]
-    return apps
+    return [app["Name"] for app in json.loads(output)]
