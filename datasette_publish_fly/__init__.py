@@ -6,7 +6,6 @@ from datasette.publish.common import (
 )
 from datasette.utils import temporary_docker_directory
 from subprocess import run, PIPE
-import tempfile
 import click
 import json
 
@@ -147,20 +146,18 @@ def publish_subcommand(publish):
             apps = existing_apps()
             if app not in apps:
                 # Attempt to create the app
-                with tempfile.TemporaryDirectory() as tmpdirname:
-                    result = run(
-                        [
-                            "flyctl",
-                            "apps",
-                            "create",
-                            "--name",
-                            app,
-                            "--json",
-                        ],
-                        cwd=tmpdirname,
-                        stderr=PIPE,
-                        stdout=PIPE,
-                    )
+                result = run(
+                    [
+                        "flyctl",
+                        "apps",
+                        "create",
+                        "--name",
+                        app,
+                        "--json",
+                    ],
+                    stderr=PIPE,
+                    stdout=PIPE,
+                )
                 if result.returncode:
                     raise click.ClickException(
                         "Error calling 'flyctl apps create':\n\n{}".format(
