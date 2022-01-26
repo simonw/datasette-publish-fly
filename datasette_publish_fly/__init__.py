@@ -8,6 +8,8 @@ from datasette.utils import temporary_docker_directory
 from subprocess import run, PIPE
 import click
 import json
+import pathlib
+import shutil
 
 FLY_TOML = """
 app = "{app}"
@@ -54,6 +56,11 @@ def publish_subcommand(publish):
         help="Name of Fly app to deploy",
         required=True,
     )
+    @click.option(
+        "--generate-dir",
+        type=click.Path(dir_okay=True, file_okay=False),
+        help="Output generated application files and stop without deploying",
+    )
     def fly(
         files,
         metadata,
@@ -78,6 +85,7 @@ def publish_subcommand(publish):
         volume,
         rw,
         app,
+        generate_dir,
     ):
         if create_volume and volume:
             raise click.ClickException(
@@ -143,33 +151,34 @@ def publish_subcommand(publish):
             environment_variables,
             port=8080,
         ):
-            apps = existing_apps()
-            if app not in apps:
-                # Attempt to create the app
-                result = run(
-                    [
-                        "flyctl",
-                        "apps",
-                        "create",
-                        "--name",
-                        app,
-                        "--json",
-                    ],
-                    stderr=PIPE,
-                    stdout=PIPE,
-                )
-                if result.returncode:
-                    raise click.ClickException(
-                        "Error calling 'flyctl apps create':\n\n{}".format(
-                            # Don't include Usage: - could be confused for usage
-                            # instructions for datasette publish fly
-                            result.stderr.decode("utf-8")
-                            .split("Usage:")[0]
-                            .strip()
-                        )
+            if not generate_dir:
+                apps = existing_apps()
+                if app not in apps:
+                    # Attempt to create the app
+                    result = run(
+                        [
+                            "flyctl",
+                            "apps",
+                            "create",
+                            "--name",
+                            app,
+                            "--json",
+                        ],
+                        stderr=PIPE,
+                        stdout=PIPE,
                     )
+                    if result.returncode:
+                        raise click.ClickException(
+                            "Error calling 'flyctl apps create':\n\n{}".format(
+                                # Don't include Usage: - could be confused for usage
+                                # instructions for datasette publish fly
+                                result.stderr.decode("utf-8")
+                                .split("Usage:")[0]
+                                .strip()
+                            )
+                        )
 
-            if create_volume:
+            if create_volume and not generate_dir:
                 # TODO: Create a volume
                 pass  # fly volumes create myapp_data --region lhr --size 40
 
@@ -184,10 +193,15 @@ def publish_subcommand(publish):
 
             fly_toml = FLY_TOML.format(app=app, mounts=mounts)
 
-            if False:
-                print(fly_toml)
-                print("---")
-                print(open("Dockerfile").read())
+            if generate_dir:
+                dir = pathlib.Path(generate_dir)
+                if not dir.exists():
+                    dir.mkdir()
+
+                # Copy files from current directory to dir
+                for file in pathlib.Path(".").glob("*"):
+                    shutil.copy(str(file), str(dir / file.name))
+                (dir / "fly.toml").write_text(fly_toml, "utf-8")
                 return
 
             open("fly.toml", "w").write(fly_toml)
