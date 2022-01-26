@@ -48,7 +48,10 @@ def publish_subcommand(publish):
     )
     @click.option("--volume", help="Name of existing volume to attach")
     @click.option(
-        "--rw", multiple=True, help="Names of read-write database files to create"
+        "--create-db",
+        "-c",
+        multiple=True,
+        help="Names of read-write database files to create",
     )
     @click.option(
         "-a",
@@ -83,7 +86,7 @@ def publish_subcommand(publish):
         spatialite,
         create_volume,
         volume,
-        rw,
+        create_db,
         app,
         generate_dir,
     ):
@@ -91,13 +94,13 @@ def publish_subcommand(publish):
             raise click.ClickException(
                 "Use one of --volume or --create-volume but not both"
             )
-        if rw and not (volume or create_volume):
+        if create_db and not (volume or create_volume):
             raise click.ClickException(
-                "--rw must be used with --volume or --create-volume"
+                "--create-db must be used with --volume or --create-volume"
             )
-        if (volume or create_volume) and not rw:
+        if (volume or create_volume) and not create_db:
             raise click.ClickException(
-                "You must specify at least one --rw name if using a volume"
+                "You must specify at least one --create-db name if using a volume"
             )
         fail_if_publish_binary_not_installed(
             "flyctl", "Fly", "https://fly.io/docs/getting-started/installing-flyctl/"
@@ -113,8 +116,8 @@ def publish_subcommand(publish):
         }
 
         extra_options = extra_options or ""
-        if rw:
-            for database_name in rw:
+        if create_db:
+            for database_name in create_db:
                 # TODO: verify these contain no spaces
                 if not database_name.endswith(".db"):
                     database_name += ".db"
