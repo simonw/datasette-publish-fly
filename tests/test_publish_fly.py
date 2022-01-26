@@ -132,7 +132,14 @@ def test_publish_fly(mock_run, mock_which):
         ),
         (
             "myapp1",
-            ["--create-volume", "1", "--rw", "tiddlywiki"],
+            ["--create-volume", "1", "--create-db", "tiddlywiki"],
+            "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT",
+            "myapp1_volume",
+            None,
+        ),
+        (
+            "myapp1",
+            ["--create-volume", "1", "-c", "tiddlywiki"],
             "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT",
             "myapp1_volume",
             None,
