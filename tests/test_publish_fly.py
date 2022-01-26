@@ -53,10 +53,7 @@ def test_publish_fly_app_name_not_available(mock_run, mock_which):
             "create",
             "--name",
             "app",
-            "--builder",
-            "Docker",
-            "--port",
-            "8080",
+            "--json",
         ]
 
 
@@ -90,10 +87,7 @@ def test_publish_fly(mock_run, mock_which):
             "create",
             "--name",
             "app",
-            "--builder",
-            "Docker",
-            "--port",
-            "8080",
+            "--json",
         ]
         assert apps_deploy_call == mock.call(
             [

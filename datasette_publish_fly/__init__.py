@@ -12,7 +12,7 @@ import json
 
 FLY_TOML = """
 app = "{app}"
-
+{mounts}
 [[services]]
   internal_port = 8080
   protocol = "tcp"
@@ -41,6 +41,15 @@ def publish_subcommand(publish):
     @add_common_publish_arguments_and_options
     @click.option("--spatialite", is_flag=True, help="Enable SpatialLite extension")
     @click.option(
+        "--create-volume",
+        type=click.IntRange(min=1),
+        help="Create and attach volume of this size in GB",
+    )
+    @click.option("--volume", help="Name of existing volume to attach")
+    @click.option(
+        "--rw", multiple=True, help="Names of read-write database files to create"
+    )
+    @click.option(
         "-a",
         "--app",
         help="Name of Fly app to deploy",
@@ -66,8 +75,23 @@ def publish_subcommand(publish):
         about,
         about_url,
         spatialite,
+        create_volume,
+        volume,
+        rw,
         app,
     ):
+        if create_volume and volume:
+            raise click.ClickException(
+                "Use one of --volume or --create-volume but not both"
+            )
+        if rw and not (volume or create_volume):
+            raise click.ClickException(
+                "--rw must be used with --volume or --create-volume"
+            )
+        if (volume or create_volume) and not rw:
+            raise click.ClickException(
+                "You must specify at least one --rw name if using a volume"
+            )
         fail_if_publish_binary_not_installed(
             "flyctl", "Fly", "https://fly.io/docs/getting-started/installing-flyctl/"
         )
@@ -80,6 +104,15 @@ def publish_subcommand(publish):
             "about": about,
             "about_url": about_url,
         }
+
+        extra_options = extra_options or ""
+        if rw:
+            for database_name in rw:
+                # TODO: verify these contain no spaces
+                if not database_name.endswith(".db"):
+                    database_name += ".db"
+                extra_options += " /data/{}".format(database_name)
+            extra_options += " --create"
 
         environment_variables = {}
         if plugin_secret:
@@ -122,10 +155,7 @@ def publish_subcommand(publish):
                             "create",
                             "--name",
                             app,
-                            "--builder",
-                            "Docker",
-                            "--port",
-                            "8080",
+                            "--json",
                         ],
                         cwd=tmpdirname,
                         stderr=PIPE,
@@ -142,7 +172,28 @@ def publish_subcommand(publish):
                         )
                     )
 
-            open("fly.toml", "w").write(FLY_TOML.format(app=app))
+            if create_volume:
+                # TODO: Create a volume
+                pass  # fly volumes create myapp_data --region lhr --size 40
+
+            mounts = ""
+            volume_name = "{}_volume".format(app)
+            if create_volume:
+                mounts = (
+                    "\n[[mounts]]\n"
+                    '  destination = "/data"\n'
+                    '  source = "{}"\n'.format(volume_name)
+                )
+
+            fly_toml = FLY_TOML.format(app=app, mounts=mounts)
+
+            if False:
+                print(fly_toml)
+                print("---")
+                print(open("Dockerfile").read())
+                return
+
+            open("fly.toml", "w").write(fly_toml)
             # Now deploy it
             run(
                 [
@@ -160,5 +211,4 @@ def publish_subcommand(publish):
 
 def existing_apps():
     process = run(["flyctl", "apps", "list", "--json"], stdout=PIPE, stderr=PIPE)
-    output = process.stdout.decode("utf8")
-    return [app["Name"] for app in json.loads(output)]
+    return [app["Name"] for app in json.loads(process.stdout)]
