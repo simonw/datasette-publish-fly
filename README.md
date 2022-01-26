@@ -29,6 +29,8 @@ To update an application, run the publish command passing the same application n
 
 Fly will charge you monthly for each application you have live. Details of their pricing can be [found on their site](https://fly.io/docs/pricing/).
 
+Your application will be deployed at `https://your-app-name.fly.io/` - be aware that it may take several minutes to start working the first time you deploy it.
+
 ## Generating without deploying
 
 Use the `--generate-dir` option to generate a directory that can be deployed to Fly rather than deploying directly:
