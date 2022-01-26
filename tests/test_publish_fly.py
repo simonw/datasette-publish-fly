@@ -2,6 +2,7 @@ from click.testing import CliRunner
 from datasette import cli
 from unittest import mock
 from subprocess import PIPE
+import pathlib
 import pytest
 
 
@@ -101,3 +102,120 @@ def test_publish_fly(mock_run, mock_which):
                 "--remote-only",
             ]
         )
+
+
+@mock.patch("shutil.which")
+@mock.patch("datasette_publish_fly.run")
+@pytest.mark.parametrize(
+    "app_name,opts,expected_cmd,expected_mount,expected_files",
+    (
+        (
+            "myapp1",
+            [],
+            "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json --port $PORT",
+            None,
+            None,
+        ),
+        (
+            "myapp2",
+            ["database.db"],
+            "CMD datasette serve --host 0.0.0.0 -i database.db --cors --inspect-file inspect-data.json --port $PORT",
+            None,
+            ["database.db"],
+        ),
+        (
+            "myapp2",
+            ["database.db", "-m", "metadata.json"],
+            "CMD datasette serve --host 0.0.0.0 -i database.db --cors --inspect-file inspect-data.json --metadata metadata.json --port $PORT",
+            None,
+            ["database.db", "metadata.json"],
+        ),
+        (
+            "myapp1",
+            ["--create-volume", "1", "--rw", "tiddlywiki"],
+            "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT",
+            "myapp1_volume",
+            None,
+        ),
+    ),
+)
+def test_generate_directory(
+    mock_run,
+    mock_which,
+    tmp_path_factory,
+    app_name,
+    opts,
+    expected_cmd,
+    expected_mount,
+    expected_files,
+):
+    mock_which.return_value = True
+
+    expected_files = expected_files or []
+    expected_files += ["fly.toml", "Dockerfile"]
+
+    input_directory = tmp_path_factory.mktemp("input")
+    output_directory = tmp_path_factory.mktemp("output")
+
+    # Rewrite options array with paths to input_directory
+    new_opts = []
+    if opts:
+        for opt in opts:
+            if opt in expected_files:
+                new_opts.append(str(input_directory / opt))
+            else:
+                new_opts.append(opt)
+    opts = new_opts
+
+    runner = CliRunner()
+    if "database.db" in expected_files:
+        (input_directory / "database.db").write_text("", "utf-8")
+    if "metadata.json" in expected_files:
+        (input_directory / "metadata.json").write_text(
+            '{"title": "Metadata title"}', "utf-8"
+        )
+    result = runner.invoke(
+        cli.cli,
+        ["publish", "fly", "-a", app_name, "--generate-dir", str(output_directory)]
+        + opts,
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0, result.output
+
+    filenames = [p.name for p in pathlib.Path(output_directory).glob("*")]
+    assert set(filenames) == set(expected_files)
+
+    fly_toml = (output_directory / "fly.toml").read_text("utf-8")
+    dockerfile = (output_directory / "Dockerfile").read_text("utf-8")
+    dockerfile_cmd = dockerfile.strip().split("\n")[-1]
+    expected_mounts = ""
+    if expected_mount:
+        expected_mounts = (
+            "[[mounts]]\n"
+            '  destination = "/data"\n' + '  source = "{}"\n\n'.format(expected_mount)
+        )
+    assert fly_toml == (
+        "\n"
+        'app = "{}"\n'.format(app_name) + "\n" + expected_mounts + "[[services]]\n"
+        "  internal_port = 8080\n"
+        '  protocol = "tcp"\n'
+        "\n"
+        "  [services.concurrency]\n"
+        "    hard_limit = 25\n"
+        "    soft_limit = 20\n"
+        "\n"
+        "  [[services.ports]]\n"
+        '    handlers = ["http"]\n'
+        '    port = "80"\n'
+        "\n"
+        "  [[services.ports]]\n"
+        '    handlers = ["tls", "http"]\n'
+        '    port = "443"\n'
+        "\n"
+        "  [[services.tcp_checks]]\n"
+        "    interval = 10000\n"
+        "    timeout = 2000\n"
+    )
+    assert dockerfile_cmd == expected_cmd
+
+    assert not mock_run.called

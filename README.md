@@ -28,3 +28,17 @@ The argument you pass to `--app` will be used for the URL of your application: `
 To update an application, run the publish command passing the same application name to the `--app` option.
 
 Fly will charge you monthly for each application you have live. Details of their pricing can be [found on their site](https://fly.io/docs/pricing/).
+
+## Generating without deploying
+
+Use the `--generate-dir` option to generate a directory that can be deployed to Fly rather than deploying directly:
+
+    datasette publish fly my-database.db \
+      --app="my-generated-app" \
+      --generate-dir /tmp/deploy-this
+
+You can then manually deploy your generated application using the following:
+
+    cd /tmp/deploy-this
+    flyctl apps create my-generated-app
+    flyctl deploy
