@@ -44,3 +44,35 @@ You can then manually deploy your generated application using the following:
     cd /tmp/deploy-this
     flyctl apps create my-generated-app
     flyctl deploy
+
+## Development
+
+To contribute to this tool, first checkout the code. Then create a new virtual environment:
+
+    cd datasette-publish-fly
+    python -m venv venv
+    source venv/bin/activate
+
+Or if you are using `pipenv`:
+
+    pipenv shell
+
+Now install the dependencies and test dependencies:
+
+    pip install -e '.[test]'
+
+To run the tests:
+
+    pytest
+
+### Integration tests
+
+The tests in `tests/test_integration.py` make actual calls to Fly to deploy a test application.
+
+These tests are skipped by default. If you have `flyctl` installed and configured, you can run the integration tests like this:
+
+    pytest --integration -s
+
+The `-s` option here ensures that output from the deploys will be visible to you - otherwise it can look like the tests have hung.
+
+The tests will create applications on Fly that start with the prefix `publish-fly-temp-` and then delete them at the end of the run.
