@@ -226,3 +226,16 @@ def test_generate_directory(
     assert dockerfile_cmd == expected_cmd
 
     assert not mock_run.called
+
+
+@mock.patch("shutil.which")
+@pytest.mark.parametrize("option", ("-c", "--create-db"))
+def test_publish_fly_create_db_no_spaces(mock_which, option):
+    mock_which.return_value = True
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.cli,
+        ["publish", "fly", "-a", "app", "--create-volume", 1, option, "tiddly wiki"],
+    )
+    assert result.exit_code == 2
+    assert "Database name cannot contain spaces" in result.output

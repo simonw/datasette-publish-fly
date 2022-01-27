@@ -51,6 +51,7 @@ def publish_subcommand(publish):
         "--create-db",
         "-c",
         multiple=True,
+        callback=validate_database_name,
         help="Names of read-write database files to create",
     )
     @click.option(
@@ -118,7 +119,6 @@ def publish_subcommand(publish):
         extra_options = extra_options or ""
         if create_db:
             for database_name in create_db:
-                # TODO: verify these contain no spaces
                 if not database_name.endswith(".db"):
                     database_name += ".db"
                 extra_options += " /data/{}".format(database_name)
@@ -226,3 +226,10 @@ def publish_subcommand(publish):
 def existing_apps():
     process = run(["flyctl", "apps", "list", "--json"], stdout=PIPE, stderr=PIPE)
     return [app["Name"] for app in json.loads(process.stdout)]
+
+
+def validate_database_name(ctx, param, value):
+    for name in value:
+        if " " in name:
+            raise click.BadParameter("Database name cannot contain spaces")
+    return value
