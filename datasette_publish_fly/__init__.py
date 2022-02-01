@@ -7,9 +7,11 @@ from datasette.publish.common import (
 from datasette.utils import temporary_docker_directory
 from subprocess import run, PIPE
 import click
+import httpx
 import json
 import pathlib
 import shutil
+
 
 FLY_TOML = """
 app = "{app}"
@@ -41,6 +43,10 @@ def publish_subcommand(publish):
     @publish.command()
     @add_common_publish_arguments_and_options
     @click.option("--spatialite", is_flag=True, help="Enable SpatialLite extension")
+    @click.option(
+        "--region",
+        help="Fly region to deploy to, e.g sjc - see https://fly.io/docs/reference/regions/",
+    )
     @click.option(
         "--create-volume",
         type=click.IntRange(min=1),
@@ -85,6 +91,7 @@ def publish_subcommand(publish):
         about,
         about_url,
         spatialite,
+        region,
         create_volume,
         volume,
         create_db,
@@ -103,9 +110,52 @@ def publish_subcommand(publish):
             raise click.ClickException(
                 "You must specify at least one --create-db name if using a volume"
             )
-        fail_if_publish_binary_not_installed(
-            "flyctl", "Fly", "https://fly.io/docs/getting-started/installing-flyctl/"
-        )
+        fly_token = None
+        if not generate_dir:
+            # They must have flyctl installed
+            fail_if_publish_binary_not_installed(
+                "flyctl",
+                "Fly",
+                "https://fly.io/docs/getting-started/installing-flyctl/",
+            )
+            # And they need to be logged in
+            token_result = run(
+                [
+                    "flyctl",
+                    "auth",
+                    "token",
+                    "--json",
+                ],
+                stderr=PIPE,
+                stdout=PIPE,
+            )
+            if token_result.returncode:
+                raise click.ClickException(
+                    "Error calling 'flyctl auth token':\n\n{}".format(
+                        token_result.stderr.decode("utf-8").strip()
+                    )
+                )
+            else:
+                fly_token = json.loads(token_result.stdout)["token"]
+
+            # If they didn't specify a region, use fly_token to find the nearest
+            if not region:
+                response = httpx.post(
+                    "https://api.fly.io/graphql",
+                    json={"query": "{ nearestRegion { code } }"},
+                    headers={
+                        "accept": "application/json",
+                        "Authorization": "Bearer {}".format(fly_token),
+                    },
+                )
+                if response.status_code == 200 and "errors" not in response.json():
+                    # {'data': {'nearestRegion': {'code': 'sjc'}}}
+                    region = response.json()["data"]["nearestRegion"]["code"]
+                else:
+                    raise click.ClickException(
+                        "Could not resolve nearest region, specify --region"
+                    )
+
         extra_metadata = {
             "title": title,
             "license": license,
@@ -181,12 +231,36 @@ def publish_subcommand(publish):
                             )
                         )
 
-            if create_volume and not generate_dir:
-                # TODO: Create a volume
-                pass  # fly volumes create myapp_data --region lhr --size 40
-
+            volume_name = "{}_volume".format(app.replace("-", "_"))
             mounts = ""
-            volume_name = "{}_volume".format(app)
+
+            if create_volume and not generate_dir:
+                create_volume_result = run(
+                    [
+                        "flyctl",
+                        "volumes",
+                        "create",
+                        volume_name,
+                        "--region",
+                        region,
+                        "--size",
+                        str(create_volume),
+                        "-a",
+                        app,
+                        "--json",
+                    ],
+                    stderr=PIPE,
+                    stdout=PIPE,
+                )
+                if create_volume_result.returncode:
+                    raise click.ClickException(
+                        "Error calling 'flyctl volumes create':\n\n{}".format(
+                            create_volume_result.stderr.decode("utf-8")
+                            .split("Usage:")[0]
+                            .strip()
+                        )
+                    )
+
             if create_volume:
                 mounts = (
                     "\n[[mounts]]\n"
