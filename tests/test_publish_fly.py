@@ -13,6 +13,14 @@ class FakeCompletedProcess:
         self.returncode = returncode
 
 
+@pytest.fixture
+def mock_graphql_region(mocker):
+    m = mocker.patch("datasette_publish_fly.httpx")
+    m.post.return_value = mocker.Mock()
+    m.post.return_value.status_code = 200
+    m.post.return_value.json.return_value = {"data": {"nearestRegion": {"code": "sjc"}}}
+
+
 @mock.patch("shutil.which")
 def test_publish_fly_requires_flyctl(mock_which):
     mock_which.return_value = False
@@ -26,13 +34,15 @@ def test_publish_fly_requires_flyctl(mock_which):
 
 @mock.patch("shutil.which")
 @mock.patch("datasette_publish_fly.run")
-def test_publish_fly_app_name_not_available(mock_run, mock_which):
+def test_publish_fly_app_name_not_available(mock_run, mock_which, mock_graphql_region):
     mock_which.return_value = True
     runner = CliRunner()
 
     def run_side_effect(*args, **kwargs):
         if args == (["flyctl", "apps", "list", "--json"],):
             return FakeCompletedProcess(b"[]", b"")
+        elif args == (["flyctl", "auth", "token", "--json"],):
+            return FakeCompletedProcess(b'{"token": "TOKEN"}', b"")
         else:
             print(args)
             return FakeCompletedProcess(b"", b"That app name is not available", 1)
@@ -41,10 +51,15 @@ def test_publish_fly_app_name_not_available(mock_run, mock_which):
 
     with runner.isolated_filesystem():
         open("test.db", "w").write("data")
-        result = runner.invoke(cli.cli, ["publish", "fly", "test.db", "-a", "app"])
+        result = runner.invoke(
+            cli.cli, ["publish", "fly", "test.db", "-a", "app"], catch_exceptions=False
+        )
         assert 1 == result.exit_code
         assert "That app name is not available" in result.output
-        apps_list_call, apps_create_call = mock_run.call_args_list
+        auth_token_call, apps_list_call, apps_create_call = mock_run.call_args_list
+        assert auth_token_call == mock.call(
+            ["flyctl", "auth", "token", "--json"], stderr=PIPE, stdout=PIPE
+        )
         assert apps_list_call == mock.call(
             ["flyctl", "apps", "list", "--json"], stdout=PIPE, stderr=PIPE
         )
@@ -60,13 +75,15 @@ def test_publish_fly_app_name_not_available(mock_run, mock_which):
 
 @mock.patch("shutil.which")
 @mock.patch("datasette_publish_fly.run")
-def test_publish_fly(mock_run, mock_which):
+def test_publish_fly(mock_run, mock_which, mock_graphql_region):
     mock_which.return_value = True
     runner = CliRunner()
 
     def run_side_effect(*args, **kwargs):
         if args == (["flyctl", "apps", "list", "--json"],):
             return FakeCompletedProcess(b"[]", b"")
+        elif args == (["flyctl", "auth", "token", "--json"],):
+            return FakeCompletedProcess(b'{"token": "TOKEN"}', b"")
         else:
             print(args)
             return FakeCompletedProcess(b"", 0)
@@ -78,7 +95,15 @@ def test_publish_fly(mock_run, mock_which):
         result = runner.invoke(cli.cli, ["publish", "fly", "test.db", "-a", "app"])
         assert result.exit_code == 0, result.output
 
-        apps_list_call, apps_create_call, apps_deploy_call = mock_run.call_args_list
+        (
+            auth_token_call,
+            apps_list_call,
+            apps_create_call,
+            apps_deploy_call,
+        ) = mock_run.call_args_list
+        assert auth_token_call == mock.call(
+            ["flyctl", "auth", "token", "--json"], stderr=PIPE, stdout=PIPE
+        )
         assert apps_list_call == mock.call(
             ["flyctl", "apps", "list", "--json"], stdout=PIPE, stderr=PIPE
         )
@@ -183,8 +208,7 @@ def test_generate_directory(
         )
     result = runner.invoke(
         cli.cli,
-        ["publish", "fly", "-a", app_name, "--generate-dir", str(output_directory)]
-        + opts,
+        ["publish", "fly", "-a", app_name, "--generate", str(output_directory)] + opts,
         catch_exceptions=False,
     )
     assert result.exit_code == 0, result.output
