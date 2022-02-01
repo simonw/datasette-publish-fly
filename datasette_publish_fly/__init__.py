@@ -67,7 +67,7 @@ def publish_subcommand(publish):
         required=True,
     )
     @click.option(
-        "--generate-dir",
+        "--generate",
         type=click.Path(dir_okay=True, file_okay=False),
         help="Output generated application files and stop without deploying",
     )
@@ -96,7 +96,7 @@ def publish_subcommand(publish):
         volume,
         create_db,
         app,
-        generate_dir,
+        generate,
     ):
         if create_volume and volume:
             raise click.ClickException(
@@ -111,7 +111,7 @@ def publish_subcommand(publish):
                 "You must specify at least one --create-db name if using a volume"
             )
         fly_token = None
-        if not generate_dir:
+        if not generate:
             # They must have flyctl installed
             fail_if_publish_binary_not_installed(
                 "flyctl",
@@ -204,7 +204,7 @@ def publish_subcommand(publish):
             environment_variables,
             port=8080,
         ):
-            if not generate_dir:
+            if not generate:
                 apps = existing_apps()
                 if app not in apps:
                     # Attempt to create the app
@@ -234,7 +234,7 @@ def publish_subcommand(publish):
             volume_name = "{}_volume".format(app.replace("-", "_"))
             mounts = ""
 
-            if create_volume and not generate_dir:
+            if create_volume and not generate:
                 create_volume_result = run(
                     [
                         "flyctl",
@@ -270,8 +270,8 @@ def publish_subcommand(publish):
 
             fly_toml = FLY_TOML.format(app=app, mounts=mounts)
 
-            if generate_dir:
-                dir = pathlib.Path(generate_dir)
+            if generate:
+                dir = pathlib.Path(generate)
                 if not dir.exists():
                     dir.mkdir()
 

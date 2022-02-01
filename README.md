@@ -33,11 +33,11 @@ Your application will be deployed at `https://your-app-name.fly.io/` - be aware 
 
 ## Generating without deploying
 
-Use the `--generate-dir` option to generate a directory that can be deployed to Fly rather than deploying directly:
+Use the `--generate` option to generate a directory that can be deployed to Fly rather than deploying directly:
 
     datasette publish fly my-database.db \
       --app="my-generated-app" \
-      --generate-dir /tmp/deploy-this
+      --generate /tmp/deploy-this
 
 You can then manually deploy your generated application using the following:
 
