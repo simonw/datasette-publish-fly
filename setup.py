@@ -28,7 +28,7 @@ setup(
     version=VERSION,
     packages=["datasette_publish_fly"],
     entry_points={"datasette": ["publish_fly = datasette_publish_fly"]},
-    install_requires=["datasette>=0.44"],
+    install_requires=["datasette>=0.60.2"],
     extras_require={"test": ["pytest", "pytest-mock"]},
     tests_require=["datasette-publish-fly[test]"],
 )
