@@ -52,14 +52,13 @@ def publish_subcommand(publish):
         type=click.IntRange(min=1),
         help="Create and attach volume of this size in GB",
     )
-    @click.option("--volume", help="Name of existing volume to attach")
     @click.option(
         "--create-db",
-        "-c",
         multiple=True,
         callback=validate_database_name,
         help="Names of read-write database files to create",
     )
+    @click.option("--volume-name", default="datasette", help="Volume name to use")
     @click.option(
         "-a",
         "--app",
@@ -67,7 +66,7 @@ def publish_subcommand(publish):
         required=True,
     )
     @click.option(
-        "--generate",
+        "--generate-dir",
         type=click.Path(dir_okay=True, file_okay=False),
         help="Output generated application files and stop without deploying",
     )
@@ -93,25 +92,13 @@ def publish_subcommand(publish):
         spatialite,
         region,
         create_volume,
-        volume,
         create_db,
+        volume_name,
         app,
-        generate,
+        generate_dir,
     ):
-        if create_volume and volume:
-            raise click.ClickException(
-                "Use one of --volume or --create-volume but not both"
-            )
-        if create_db and not (volume or create_volume):
-            raise click.ClickException(
-                "--create-db must be used with --volume or --create-volume"
-            )
-        if (volume or create_volume) and not create_db:
-            raise click.ClickException(
-                "You must specify at least one --create-db name if using a volume"
-            )
         fly_token = None
-        if not generate:
+        if not generate_dir:
             # They must have flyctl installed
             fail_if_publish_binary_not_installed(
                 "flyctl",
@@ -204,7 +191,7 @@ def publish_subcommand(publish):
             environment_variables,
             port=8080,
         ):
-            if not generate:
+            if not generate_dir:
                 apps = existing_apps()
                 if app not in apps:
                     # Attempt to create the app
@@ -231,10 +218,9 @@ def publish_subcommand(publish):
                             )
                         )
 
-            volume_name = "{}_volume".format(app.replace("-", "_"))
             mounts = ""
 
-            if create_volume and not generate:
+            if create_volume and not generate_dir:
                 create_volume_result = run(
                     [
                         "flyctl",
@@ -270,8 +256,8 @@ def publish_subcommand(publish):
 
             fly_toml = FLY_TOML.format(app=app, mounts=mounts)
 
-            if generate:
-                dir = pathlib.Path(generate)
+            if generate_dir:
+                dir = pathlib.Path(generate_dir)
                 if not dir.exists():
                     dir.mkdir()
 
