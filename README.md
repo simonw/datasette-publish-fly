@@ -93,6 +93,60 @@ You can then manually deploy your generated application using the following:
     flyctl apps create my-generated-app
     flyctl deploy
 
+## datasette publish fly --help
+
+<!-- [[[cog
+import cog
+from datasette import cli
+from click.testing import CliRunner
+runner = CliRunner()
+result = runner.invoke(cli.cli, ["publish", "fly", "--help"])
+help = result.output.replace("Usage: cli", "Usage: datasette")
+cog.out(
+    "```\n{}```".format(help)
+)
+]]] -->
+```
+Usage: datasette publish fly [OPTIONS] [FILES]...
+
+Options:
+  -m, --metadata FILENAME         Path to JSON/YAML file containing metadata to
+                                  publish
+  --extra-options TEXT            Extra options to pass to datasette serve
+  --branch TEXT                   Install datasette from a GitHub branch e.g.
+                                  main
+  --template-dir DIRECTORY        Path to directory containing custom templates
+  --plugins-dir DIRECTORY         Path to directory containing custom plugins
+  --static MOUNT:DIRECTORY        Serve static files from this directory at
+                                  /MOUNT/...
+  --install TEXT                  Additional packages (e.g. plugins) to install
+  --plugin-secret <TEXT TEXT TEXT>...
+                                  Secrets to pass to plugins, e.g. --plugin-
+                                  secret datasette-auth-github client_id xxx
+  --version-note TEXT             Additional note to show on /-/versions
+  --secret TEXT                   Secret used for signing secure values, such as
+                                  signed cookies
+  --title TEXT                    Title for metadata
+  --license TEXT                  License label for metadata
+  --license_url TEXT              License URL for metadata
+  --source TEXT                   Source label for metadata
+  --source_url TEXT               Source URL for metadata
+  --about TEXT                    About label for metadata
+  --about_url TEXT                About URL for metadata
+  --spatialite                    Enable SpatialLite extension
+  --region TEXT                   Fly region to deploy to, e.g sjc - see
+                                  https://fly.io/docs/reference/regions/
+  --create-volume INTEGER RANGE   Create and attach volume of this size in GB
+                                  [x>=1]
+  --create-db TEXT                Names of read-write database files to create
+  --volume-name TEXT              Volume name to use
+  -a, --app TEXT                  Name of Fly app to deploy  [required]
+  --generate-dir DIRECTORY        Output generated application files and stop
+                                  without deploying
+  --help                          Show this message and exit.
+```
+<!-- [[[end]]] -->
+
 ## Development
 
 To contribute to this tool, first checkout the code. Then create a new virtual environment:
