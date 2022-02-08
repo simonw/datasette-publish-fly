@@ -5,21 +5,21 @@
 [![Tests](https://github.com/simonw/datasette-publish-fly/workflows/Test/badge.svg)](https://github.com/simonw/datasette-publish-fly/actions?query=workflow%3ATest)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/simonw/datasette-publish-fly/blob/main/LICENSE)
 
-Datasette plugin for publishing data using [Fly](https://fly.io/).
+[Datasette](https://datasette.io/) plugin for deploying Datasette instances to [Fly.io](https://fly.io/).
 
 ## Installation
 
 Install this plugin in the same environment as Datasette.
 
-    $ pip install datasette-publish-fly
+    $ datasette install datasette-publish-fly
 
-## Usage
+## Deploying read-only data
 
 First, install the `flyctl` command-line tool by [following their instructions](https://fly.io/docs/getting-started/installing-flyctl/).
 
 Run `flyctl auth signup` to create an account there, or `flyctl auth login` if you already have one.
 
-Now you can use `datasette publish fly` to publish your data:
+You can now use `datasette publish fly` to publish your data:
 
     datasette publish fly my-database.db --app="my-data-app"
 
@@ -27,9 +27,57 @@ The argument you pass to `--app` will be used for the URL of your application: `
 
 To update an application, run the publish command passing the same application name to the `--app` option.
 
-Fly will charge you monthly for each application you have live. Details of their pricing can be [found on their site](https://fly.io/docs/pricing/).
+Fly have [a free tier](https://fly.io/docs/about/pricing/#free-allowances), beyond which they will charge you monthly for each application you have live.  Details of their pricing can be [found on their site](https://fly.io/docs/pricing/).
 
 Your application will be deployed at `https://your-app-name.fly.io/` - be aware that it may take several minutes to start working the first time you deploy it.
+
+## Using Fly volumes for writable databases
+
+Fly [Volumes](https://fly.io/docs/reference/volumes/) provide persistant disk storage for Fly applications. Volumes can be 1GB or more in size and the Fly free tier includes 3GB of volume space.
+
+Datasette plugins such as [datasette-uploads-csvs](https://datasette.io/plugins/datasette-upload-csvs) and [datasette-tiddlywiki](https://datasette.io/plugins/datasette-tiddlywiki) can be deployed to Fly and store their mutable data in a volume.
+
+Here's how to deploy `datasette-tiddlywiki` with authentication provided by `datasette-auth-passwords`.
+
+First, you'll need to create a root password hash to use to sign into the instance.
+
+You can [this hosted tool](https://datasette-auth-passwords-demo.datasette.io/-/password-tool) or run it yourself by starting Datasette with the `datasette-auth-passwords` plugin installed locally and using the tool at `http://localhost:8001/-/password-tool`.
+
+The hash should look like `pbkdf2_sha256$...` - you'll need this for the next step.
+
+Pick a name for your new application, then run the following:
+
+    datasette publish fly \
+    --app your-application-name \
+    --create-volume 1 \
+    --create-db tiddlywiki \
+    --plugin-secret datasette-auth-passwords root_password_hash 'pbkdf2_sha256$...' \
+    --install datasette-auth-passwords \
+    --install datasette-tiddlywiki
+
+This will create the new application, create a 1GB volume for that application, create a new database in that volume called `tiddlywiki.db`, then install the two plugins and configure the password you specified.
+
+### Updating applications that use a volume
+
+Once you have deployed an application using a volume, you can update that application without needing the `--create-volume` or `--create-db` options. To add the [datasette-graphq](https://datasette.io/plugins/datasette-graphql) plugin to your deployed application you would run the following:
+
+    datasette publish fly \
+    --app your-application-name \
+    --install datasette-auth-passwords \
+    --install datasette-tiddlywiki \
+    --install datasette-graphql
+
+Since the application name is the same you don't need the `--create-volume`, `--create-db` or `--plugin-secret` options - these are persisted automatically between deploys.
+
+You do need to specify the full list of plugins that you want to have installed.
+
+### Advanced volume usage
+
+`datasette publish fly` will add a volume called `datasette` to your Fly application. You can customize the name using the `--volume name custom_name` option.
+
+Fly can be used to scale applications to run multiple instances in multiple regions around the world. This works well with read-only Datasette but is not currently recommended using Datasette with volumes, since each Fly replica would need its own volume and data stored in one instance would not be visible in others.
+
+If you want to use multiple instances with volumes you will need to switch to using the `flyctl` command directly. The `--generate-dir` option, described below, can help with this.
 
 ## Generating without deploying
 
