@@ -159,14 +159,21 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
             "myapp1",
             ["--create-volume", "1", "--create-db", "tiddlywiki"],
             "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT",
-            "myapp1_volume",
+            "datasette",
             None,
         ),
         (
-            "myapp1",
-            ["--create-volume", "1", "-c", "tiddlywiki"],
+            "myapp1_custom_volume",
+            [
+                "--create-volume",
+                "1",
+                "--create-db",
+                "tiddlywiki",
+                "--volume-name",
+                "custom_volume",
+            ],
             "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT",
-            "myapp1_volume",
+            "custom_volume",
             None,
         ),
     ),
@@ -208,7 +215,8 @@ def test_generate_directory(
         )
     result = runner.invoke(
         cli.cli,
-        ["publish", "fly", "-a", app_name, "--generate", str(output_directory)] + opts,
+        ["publish", "fly", "-a", app_name, "--generate-dir", str(output_directory)]
+        + opts,
         catch_exceptions=False,
     )
     assert result.exit_code == 0, result.output
@@ -253,13 +261,21 @@ def test_generate_directory(
 
 
 @mock.patch("shutil.which")
-@pytest.mark.parametrize("option", ("-c", "--create-db"))
-def test_publish_fly_create_db_no_spaces(mock_which, option):
+def test_publish_fly_create_db_no_spaces(mock_which):
     mock_which.return_value = True
     runner = CliRunner()
     result = runner.invoke(
         cli.cli,
-        ["publish", "fly", "-a", "app", "--create-volume", 1, option, "tiddly wiki"],
+        [
+            "publish",
+            "fly",
+            "-a",
+            "app",
+            "--create-volume",
+            1,
+            "--create-db",
+            "tiddly wiki",
+        ],
     )
     assert result.exit_code == 2
     assert "Database name cannot contain spaces" in result.output
