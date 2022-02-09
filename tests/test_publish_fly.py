@@ -279,3 +279,75 @@ def test_publish_fly_create_db_no_spaces(mock_which):
     )
     assert result.exit_code == 2
     assert "Database name cannot contain spaces" in result.output
+
+
+@mock.patch("shutil.which")
+@mock.patch("datasette_publish_fly.run")
+def test_publish_fly_create_plugin_secret(mock_run, mock_which):
+    mock_which.return_value = True
+
+    def run_side_effect(*args, **kwargs):
+        if args == (["flyctl", "apps", "list", "--json"],):
+            return FakeCompletedProcess(b"[]", b"")
+        elif args == (["flyctl", "apps", "create", "--name", "app", "--json"],):
+            return FakeCompletedProcess(b"", b"")
+        elif args == (["flyctl", "auth", "token", "--json"],):
+            return FakeCompletedProcess(b'{"token": "TOKEN"}', b"")
+        else:
+            print(args)
+            return FakeCompletedProcess(b"", b"That app name is not available", 1)
+
+    mock_run.side_effect = run_side_effect
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.cli,
+        [
+            "publish",
+            "fly",
+            "-a",
+            "app",
+            "--region",
+            "sjc",
+            "--plugin-secret",
+            "datasette-auth-passwords",
+            "ROOT_PASSWORD_HASH",
+            "root",
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert mock_run.call_args_list == [
+        mock.call(["flyctl", "auth", "token", "--json"], stderr=-1, stdout=-1),
+        mock.call(["flyctl", "apps", "list", "--json"], stdout=-1, stderr=-1),
+        mock.call(
+            ["flyctl", "apps", "create", "--name", "app", "--json"],
+            stderr=-1,
+            stdout=-1,
+        ),
+        mock.call(
+            [
+                "flyctl",
+                "secrets",
+                "set",
+                "DATASETTE_AUTH_PASSWORDS_ROOT_PASSWORD_HASH=root",
+                "-a",
+                "app",
+                "--json",
+            ],
+            stderr=-1,
+            stdout=-1,
+        ),
+        mock.call(
+            [
+                "flyctl",
+                "deploy",
+                ".",
+                "--app",
+                "app",
+                "--config",
+                "fly.toml",
+                "--remote-only",
+            ]
+        ),
+    ]

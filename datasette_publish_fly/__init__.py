@@ -162,6 +162,7 @@ def publish_subcommand(publish):
             extra_options += " --create"
 
         environment_variables = {}
+        secrets_to_set = {}
         if plugin_secret:
             extra_metadata["plugins"] = {}
             for plugin_name, plugin_setting, setting_value in plugin_secret:
@@ -170,7 +171,7 @@ def publish_subcommand(publish):
                     .upper()
                     .replace("-", "_")
                 )
-                environment_variables[environment_variable] = setting_value
+                secrets_to_set[environment_variable] = setting_value
                 extra_metadata["plugins"].setdefault(plugin_name, {})[
                     plugin_setting
                 ] = {"$env": environment_variable}
@@ -217,6 +218,23 @@ def publish_subcommand(publish):
                                 .strip()
                             )
                         )
+
+            if secrets_to_set and not generate_dir:
+                secrets_args = ["flyctl", "secrets", "set"]
+                for pair in secrets_to_set.items():
+                    secrets_args.append("{}={}".format(*pair))
+                secrets_args.extend(["-a", app, "--json"])
+                secrets_result = run(
+                    secrets_args,
+                    stderr=PIPE,
+                    stdout=PIPE,
+                )
+                if result.returncode:
+                    raise click.ClickException(
+                        "Error calling 'flyctl secrets set':\n\n{}".format(
+                            result.stderr.decode("utf-8").strip()
+                        )
+                    )
 
             mounts = ""
 
