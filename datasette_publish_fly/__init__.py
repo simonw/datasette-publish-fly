@@ -236,7 +236,7 @@ def publish_subcommand(publish):
                         )
                     )
 
-            mounts = ""
+            volume_to_mount = None
 
             if create_volume and not generate_dir:
                 create_volume_result = run(
@@ -266,10 +266,20 @@ def publish_subcommand(publish):
                     )
 
             if create_volume:
+                volume_to_mount = volume_name
+
+            if not create_volume and not generate_dir:
+                # Does the previous app have mounted volumes?
+                volumes = existing_volumes(app)
+                if volumes:
+                    volume_to_mount = volumes[0]
+
+            mounts = ""
+            if volume_to_mount:
                 mounts = (
                     "\n[[mounts]]\n"
                     '  destination = "/data"\n'
-                    '  source = "{}"\n'.format(volume_name)
+                    '  source = "{}"\n'.format(volume_to_mount)
                 )
 
             fly_toml = FLY_TOML.format(app=app, mounts=mounts)
@@ -304,6 +314,13 @@ def publish_subcommand(publish):
 def existing_apps():
     process = run(["flyctl", "apps", "list", "--json"], stdout=PIPE, stderr=PIPE)
     return [app["Name"] for app in json.loads(process.stdout)]
+
+
+def existing_volumes(app):
+    process = run(
+        ["flyctl", "volumes", "list", "-a", app, "--json"], stdout=PIPE, stderr=PIPE
+    )
+    return [volume["Name"] for volume in json.loads(process.stdout)]
 
 
 def validate_database_name(ctx, param, value):
