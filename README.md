@@ -45,9 +45,12 @@ You can [this hosted tool](https://datasette-auth-passwords-demo.datasette.io/-/
 
 The hash should look like `pbkdf2_sha256$...` - you'll need this for the next step.
 
+In this example we're also deploying a read-only database called `content.db`.
+
 Pick a name for your new application, then run the following:
 
     datasette publish fly \
+    content.db \
     --app your-application-name \
     --create-volume 1 \
     --create-db tiddlywiki \
@@ -55,13 +58,14 @@ Pick a name for your new application, then run the following:
     --install datasette-auth-passwords \
     --install datasette-tiddlywiki
 
-This will create the new application, create a 1GB volume for that application, create a new database in that volume called `tiddlywiki.db`, then install the two plugins and configure the password you specified.
+This will create the new application, deploy the `content.db` read-only database, create a 1GB volume for that application, create a new database in that volume called `tiddlywiki.db`, then install the two plugins and configure the password you specified.
 
 ### Updating applications that use a volume
 
 Once you have deployed an application using a volume, you can update that application without needing the `--create-volume` or `--create-db` options. To add the [datasette-graphq](https://datasette.io/plugins/datasette-graphql) plugin to your deployed application you would run the following:
 
     datasette publish fly \
+    content.db \
     --app your-application-name \
     --install datasette-auth-passwords \
     --install datasette-tiddlywiki \
@@ -70,6 +74,8 @@ Once you have deployed an application using a volume, you can update that applic
 Since the application name is the same you don't need the `--create-volume`, `--create-db` or `--plugin-secret` options - these are persisted automatically between deploys.
 
 You do need to specify the full list of plugins that you want to have installed.
+
+You also need to include any read-only database files that are part of the instance - `content.db` in this example - otherwise the new deployment will not include them.
 
 ### Advanced volume usage
 
