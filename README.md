@@ -54,9 +54,9 @@ Pick a name for your new application, then run the following:
     --app your-application-name \
     --create-volume 1 \
     --create-db tiddlywiki \
-    --plugin-secret datasette-auth-passwords root_password_hash 'pbkdf2_sha256$...' \
     --install datasette-auth-passwords \
-    --install datasette-tiddlywiki
+    --install datasette-tiddlywiki \
+    --plugin-secret datasette-auth-passwords root_password_hash 'pbkdf2_sha256$...'
 
 This will create the new application, deploy the `content.db` read-only database, create a 1GB volume for that application, create a new database in that volume called `tiddlywiki.db`, then install the two plugins and configure the password you specified.
 
@@ -69,11 +69,12 @@ Once you have deployed an application using a volume, you can update that applic
     --app your-application-name \
     --install datasette-auth-passwords \
     --install datasette-tiddlywiki \
-    --install datasette-graphql
+    --install datasette-graphql \
+    --plugin-secret datasette-auth-passwords root_password_hash 'pbkdf2_sha256$...' \
 
-Since the application name is the same you don't need the `--create-volume`, `--create-db` or `--plugin-secret` options - these are persisted automatically between deploys.
+Since the application name is the same you don't need the `--create-volume` or `--create-db` options - these are persisted automatically between deploys.
 
-You do need to specify the full list of plugins that you want to have installed.
+You do need to specify the full list of plugins that you want to have installed, and any plugin secrets.
 
 You also need to include any read-only database files that are part of the instance - `content.db` in this example - otherwise the new deployment will not include them.
 
