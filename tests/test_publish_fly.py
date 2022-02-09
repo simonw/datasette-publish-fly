@@ -82,8 +82,12 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
     def run_side_effect(*args, **kwargs):
         if args == (["flyctl", "apps", "list", "--json"],):
             return FakeCompletedProcess(b"[]", b"")
+        elif args == (["flyctl", "apps", "create", "--name", "app", "--json"],):
+            return FakeCompletedProcess(b"[]", b"")
         elif args == (["flyctl", "auth", "token", "--json"],):
             return FakeCompletedProcess(b'{"token": "TOKEN"}', b"")
+        elif args == (["flyctl", "volumes", "list", "-a", "app", "--json"],):
+            return FakeCompletedProcess(b"[]", b"")
         else:
             print(args)
             return FakeCompletedProcess(b"", 0)
@@ -99,6 +103,7 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
             auth_token_call,
             apps_list_call,
             apps_create_call,
+            volumes_list_call,
             apps_deploy_call,
         ) = mock_run.call_args_list
         assert auth_token_call == mock.call(
@@ -115,6 +120,9 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
             "app",
             "--json",
         ]
+        assert volumes_list_call == mock.call(
+            ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
+        )
         assert apps_deploy_call == mock.call(
             [
                 "flyctl",
@@ -291,6 +299,8 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
             return FakeCompletedProcess(b"[]", b"")
         elif args == (["flyctl", "apps", "create", "--name", "app", "--json"],):
             return FakeCompletedProcess(b"", b"")
+        elif args == (["flyctl", "volumes", "list", "-a", "app", "--json"],):
+            return FakeCompletedProcess(b"[]", b"")
         elif args == (["flyctl", "auth", "token", "--json"],):
             return FakeCompletedProcess(b'{"token": "TOKEN"}', b"")
         else:
@@ -337,6 +347,9 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
             ],
             stderr=-1,
             stdout=-1,
+        ),
+        mock.call(
+            ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
         ),
         mock.call(
             [
