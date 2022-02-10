@@ -1,5 +1,6 @@
 from click.testing import CliRunner
 from datasette import cli
+import json
 from unittest import mock
 from subprocess import PIPE
 import pathlib
@@ -378,3 +379,121 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
             ]
         ),
     ]
+
+
+@mock.patch("shutil.which")
+@mock.patch("datasette_publish_fly.run")
+@pytest.mark.parametrize("volume_exists", (False, True))
+def test_publish_fly_create_volume_ignored_if_volume_exists(
+    mock_run, mock_which, volume_exists
+):
+    mock_which.return_value = True
+
+    def run_side_effect(*args, **kwargs):
+        print(args, kwargs)
+        if args == (["flyctl", "auth", "token", "--json"],):
+            return FakeCompletedProcess(b'{"token": "TOKEN"}', b"")
+        elif args == (["flyctl", "apps", "list", "--json"],):
+            return FakeCompletedProcess(b"[]", b"")
+        elif args == (["flyctl", "apps", "create", "--name", "app", "--json"],):
+            return FakeCompletedProcess(b"", b"")
+        elif args == (["flyctl", "volumes", "list", "-a", "app", "--json"],):
+            if volume_exists:
+                return FakeCompletedProcess(
+                    json.dumps(
+                        [
+                            {
+                                "id": "vol_wod56vj56dm4ny30",
+                                "Name": "datasette",
+                            }
+                        ]
+                    ).encode("utf-8"),
+                    b"",
+                )
+            else:
+                return FakeCompletedProcess(b"[]", b"")
+        elif args == (
+            [
+                "flyctl",
+                "volumes",
+                "create",
+                "datasette",
+                "--region",
+                "sjc",
+                "--size",
+                "1",
+                "-a",
+                "app",
+                "--json",
+            ],
+        ):
+            return FakeCompletedProcess(b"", b"")
+        return FakeCompletedProcess(b"", b"That app name is not available", 1)
+
+    mock_run.side_effect = run_side_effect
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli.cli,
+        [
+            "publish",
+            "fly",
+            "-a",
+            "app",
+            "--create-volume",
+            1,
+            "--region",
+            "sjc",
+            "--create-db",
+            "tiddlywiki",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    expected = [
+        mock.call(["flyctl", "auth", "token", "--json"], stderr=-1, stdout=-1),
+        mock.call(["flyctl", "apps", "list", "--json"], stdout=-1, stderr=-1),
+        mock.call(
+            ["flyctl", "apps", "create", "--name", "app", "--json"],
+            stderr=-1,
+            stdout=-1,
+        ),
+        mock.call(
+            ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
+        ),
+    ]
+    if not volume_exists:
+        expected.append(
+            mock.call(
+                [
+                    "flyctl",
+                    "volumes",
+                    "create",
+                    "datasette",
+                    "--region",
+                    "sjc",
+                    "--size",
+                    "1",
+                    "-a",
+                    "app",
+                    "--json",
+                ],
+                stderr=-1,
+                stdout=-1,
+            )
+        )
+    expected.append(
+        mock.call(
+            [
+                "flyctl",
+                "deploy",
+                ".",
+                "--app",
+                "app",
+                "--config",
+                "fly.toml",
+                "--remote-only",
+            ]
+        )
+    )
+    assert mock_run.call_args_list == expected

@@ -242,31 +242,33 @@ def publish_subcommand(publish):
             volume_to_mount = None
 
             if create_volume and not generate_dir:
-                create_volume_result = run(
-                    [
-                        "flyctl",
-                        "volumes",
-                        "create",
-                        volume_name,
-                        "--region",
-                        region,
-                        "--size",
-                        str(create_volume),
-                        "-a",
-                        app,
-                        "--json",
-                    ],
-                    stderr=PIPE,
-                    stdout=PIPE,
-                )
-                if create_volume_result.returncode:
-                    raise click.ClickException(
-                        "Error calling 'flyctl volumes create':\n\n{}".format(
-                            create_volume_result.stderr.decode("utf-8")
-                            .split("Usage:")[0]
-                            .strip()
-                        )
+                # Ensure the volume has not been previousy created
+                if volume_name not in existing_volumes(app):
+                    create_volume_result = run(
+                        [
+                            "flyctl",
+                            "volumes",
+                            "create",
+                            volume_name,
+                            "--region",
+                            region,
+                            "--size",
+                            str(create_volume),
+                            "-a",
+                            app,
+                            "--json",
+                        ],
+                        stderr=PIPE,
+                        stdout=PIPE,
                     )
+                    if create_volume_result.returncode:
+                        raise click.ClickException(
+                            "Error calling 'flyctl volumes create':\n\n{}".format(
+                                create_volume_result.stderr.decode("utf-8")
+                                .split("Usage:")[0]
+                                .strip()
+                            )
+                        )
 
             if create_volume:
                 volume_to_mount = volume_name
