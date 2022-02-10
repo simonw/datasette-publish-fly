@@ -303,6 +303,20 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
             return FakeCompletedProcess(b"[]", b"")
         elif args == (["flyctl", "auth", "token", "--json"],):
             return FakeCompletedProcess(b'{"token": "TOKEN"}', b"")
+        elif args == (
+            [
+                "flyctl",
+                "secrets",
+                "set",
+                "DATASETTE_AUTH_PASSWORDS_ROOT_PASSWORD_HASH=root",
+                "-a",
+                "app",
+                "--json",
+            ],
+        ):
+            return FakeCompletedProcess(
+                b"", b"No change detected to secrets", returncode=1
+            )
         else:
             print(args)
             return FakeCompletedProcess(b"", b"That app name is not available", 1)

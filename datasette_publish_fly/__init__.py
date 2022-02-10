@@ -229,12 +229,15 @@ def publish_subcommand(publish):
                     stderr=PIPE,
                     stdout=PIPE,
                 )
-                if result.returncode:
-                    raise click.ClickException(
-                        "Error calling 'flyctl secrets set':\n\n{}".format(
-                            result.stderr.decode("utf-8").strip()
+                if secrets_result.returncode:
+                    # Ignore "No change detected to secrets" but raise anything else
+                    error_message = secrets_result.stderr.decode("utf-8").strip()
+                    if "No change detected to secrets" not in error_message:
+                        raise click.ClickException(
+                            "Error calling 'flyctl secrets set':\n\n{}".format(
+                                error_message
+                            )
                         )
-                    )
 
             volume_to_mount = None
 
