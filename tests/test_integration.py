@@ -76,7 +76,8 @@ def test_with_volume():
     fragments = (
         "CMD datasette serve --host 0.0.0.0 -i test.db",
         "/data/writeme.db --create --port $PORT /data/*.db",
-        'destination = "/data"\n  source = "datasette"' '"$env": "FOO_BAR"',
+        'destination = "/data"\n  source = "datasette"',
+        '"$env": "FOO_BAR"',
     )
     for fragment in fragments:
         assert fragment in result.output
