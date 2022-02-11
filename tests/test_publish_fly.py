@@ -61,17 +61,11 @@ def test_publish_fly_app_name_not_available(mock_run, mock_which, mock_graphql_r
         assert "That app name is not available" in result.output
         (
             auth_token_call,
-            volumes_list_call,
             apps_list_call,
             apps_create_call,
         ) = mock_run.call_args_list
         assert auth_token_call == mock.call(
             ["flyctl", "auth", "token", "--json"], stderr=PIPE, stdout=PIPE
-        )
-        assert volumes_list_call == mock.call(
-            ["flyctl", "volumes", "list", "-a", "app", "--json"],
-            stderr=PIPE,
-            stdout=PIPE,
         )
         assert apps_list_call == mock.call(
             ["flyctl", "apps", "list", "--json"], stdout=PIPE, stderr=PIPE
@@ -114,9 +108,9 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
 
         (
             auth_token_call,
-            volumes_list_call,
             apps_list_call,
             apps_create_call,
+            volumes_list_call,
             apps_deploy_call,
         ) = mock_run.call_args_list
         assert auth_token_call == mock.call(
@@ -356,14 +350,14 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
     assert result.exit_code == 0
     assert mock_run.call_args_list == [
         mock.call(["flyctl", "auth", "token", "--json"], stderr=-1, stdout=-1),
-        mock.call(
-            ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
-        ),
         mock.call(["flyctl", "apps", "list", "--json"], stdout=-1, stderr=-1),
         mock.call(
             ["flyctl", "apps", "create", "--name", "app", "--json"],
             stderr=-1,
             stdout=-1,
+        ),
+        mock.call(
+            ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
         ),
         mock.call(
             [
@@ -464,6 +458,12 @@ def test_publish_fly_create_volume_ignored_if_volume_exists(
 
     expected = [
         mock.call(["flyctl", "auth", "token", "--json"], stderr=-1, stdout=-1),
+        mock.call(["flyctl", "apps", "list", "--json"], stdout=-1, stderr=-1),
+        mock.call(
+            ["flyctl", "apps", "create", "--name", "app", "--json"],
+            stderr=-1,
+            stdout=-1,
+        ),
         mock.call(
             ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
         ),
@@ -490,12 +490,6 @@ def test_publish_fly_create_volume_ignored_if_volume_exists(
         )
     expected.extend(
         [
-            mock.call(["flyctl", "apps", "list", "--json"], stdout=-1, stderr=-1),
-            mock.call(
-                ["flyctl", "apps", "create", "--name", "app", "--json"],
-                stderr=-1,
-                stdout=-1,
-            ),
             mock.call(
                 [
                     "flyctl",
