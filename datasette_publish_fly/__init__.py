@@ -153,8 +153,48 @@ def publish_subcommand(publish):
             "about_url": about_url,
         }
 
+        volume_to_mount = None
+
+        if create_volume and not generate_dir:
+            # Ensure the volume has not been previousy created
+            if volume_name not in existing_volumes(app):
+                create_volume_result = run(
+                    [
+                        "flyctl",
+                        "volumes",
+                        "create",
+                        volume_name,
+                        "--region",
+                        region,
+                        "--size",
+                        str(create_volume),
+                        "-a",
+                        app,
+                        "--json",
+                    ],
+                    stderr=PIPE,
+                    stdout=PIPE,
+                )
+                if create_volume_result.returncode:
+                    raise click.ClickException(
+                        "Error calling 'flyctl volumes create':\n\n{}".format(
+                            create_volume_result.stderr.decode("utf-8")
+                            .split("Usage:")[0]
+                            .strip()
+                        )
+                    )
+
+        if create_volume:
+            volume_to_mount = volume_name
+
+        if not create_volume and not generate_dir:
+            # Does the previous app have mounted volumes?
+            volumes = existing_volumes(app)
+            if volumes:
+                volume_to_mount = volumes[0]
+
         extra_options = extra_options or ""
-        if create_db:
+        if volume_to_mount:
             for database_name in create_db:
                 if not database_name.endswith(".db"):
                     database_name += ".db"
@@ -192,6 +232,14 @@ def publish_subcommand(publish):
             environment_variables,
             port=8080,
         ):
+            if volume_to_mount:
+                # Modify CMD line of Dockerfile to add /data/*.db to end of it
+                dockerfile_content = open("Dockerfile").read().strip()
+                lines = dockerfile_content.split("\n")
+                assert lines[-1].startswith("CMD ")
+                lines[-1] += " /data/*.db"
+                open("Dockerfile", "w").write("\n".join(lines))
+
             if not generate_dir:
                 apps = existing_apps()
                 if app not in apps:
@@ -239,46 +287,6 @@ def publish_subcommand(publish):
                             )
                         )
 
-            volume_to_mount = None
-
-            if create_volume and not generate_dir:
-                # Ensure the volume has not been previousy created
-                if volume_name not in existing_volumes(app):
-                    create_volume_result = run(
-                        [
-                            "flyctl",
-                            "volumes",
-                            "create",
-                            volume_name,
-                            "--region",
-                            region,
-                            "--size",
-                            str(create_volume),
-                            "-a",
-                            app,
-                            "--json",
-                        ],
-                        stderr=PIPE,
-                        stdout=PIPE,
-                    )
-                    if create_volume_result.returncode:
-                        raise click.ClickException(
-                            "Error calling 'flyctl volumes create':\n\n{}".format(
-                                create_volume_result.stderr.decode("utf-8")
-                                .split("Usage:")[0]
-                                .strip()
-                            )
-                        )
-
-            if create_volume:
-                volume_to_mount = volume_name
-
-            if not create_volume and not generate_dir:
-                # Does the previous app have mounted volumes?
-                volumes = existing_volumes(app)
-                if volumes:
-                    volume_to_mount = volumes[0]
-
             mounts = ""
             if volume_to_mount:
                 mounts = (
@@ -299,6 +307,16 @@ def publish_subcommand(publish):
                     shutil.copy(str(file), str(dir / file.name))
                 (dir / "fly.toml").write_text(fly_toml, "utf-8")
                 return
+
+            else:
+                # DEBUG show fly.toml and Dockerfile
+                print("fly.toml")
+                print("----")
+                print(fly_toml)
+                print("----")
+                print("Dockerfile")
+                print("----")
+                print(open("Dockerfile").read())
 
             open("fly.toml", "w").write(fly_toml)
             # Now deploy it
