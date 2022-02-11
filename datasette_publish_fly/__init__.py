@@ -9,6 +9,7 @@ from subprocess import run, PIPE
 import click
 import httpx
 import json
+import os
 import pathlib
 import shutil
 
@@ -70,6 +71,11 @@ def publish_subcommand(publish):
         type=click.Path(dir_okay=True, file_okay=False),
         help="Output generated application files and stop without deploying",
     )
+    @click.option(
+        "--show-files",
+        is_flag=True,
+        help="Output the generated Dockerfile, metadata.json and fly.toml",
+    )
     def fly(
         files,
         metadata,
@@ -96,6 +102,7 @@ def publish_subcommand(publish):
         volume_name,
         app,
         generate_dir,
+        show_files,
     ):
         fly_token = None
         if not generate_dir:
@@ -308,15 +315,20 @@ def publish_subcommand(publish):
                 (dir / "fly.toml").write_text(fly_toml, "utf-8")
                 return
 
-            else:
-                # DEBUG show fly.toml and Dockerfile
-                print("fly.toml")
-                print("----")
-                print(fly_toml)
-                print("----")
-                print("Dockerfile")
-                print("----")
-                print(open("Dockerfile").read())
+            elif show_files:
+                click.echo("fly.toml")
+                click.echo("----")
+                click.echo(fly_toml)
+                click.echo("----")
+                click.echo("Dockerfile")
+                click.echo("----")
+                click.echo(open("Dockerfile").read())
+                if os.path.exists("metadata.json"):
+                    click.echo("----")
+                    click.echo("metadata.json")
+                    click.echo("----")
+                    click.echo(open("metadata.json").read())
+                    click.echo("----")
 
             open("fly.toml", "w").write(fly_toml)
             # Now deploy it

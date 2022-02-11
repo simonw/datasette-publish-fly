@@ -150,6 +150,8 @@ Options:
   -a, --app TEXT                  Name of Fly app to deploy  [required]
   --generate-dir DIRECTORY        Output generated application files and stop
                                   without deploying
+  --show-files                    Output the generated Dockerfile, metadata.json
+                                  and fly.toml
   --help                          Show this message and exit.
 ```
 <!-- [[[end]]] -->
