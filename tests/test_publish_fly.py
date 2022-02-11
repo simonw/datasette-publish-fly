@@ -44,6 +44,8 @@ def test_publish_fly_app_name_not_available(mock_run, mock_which, mock_graphql_r
             return FakeCompletedProcess(b"[]", b"")
         elif args == (["flyctl", "auth", "token", "--json"],):
             return FakeCompletedProcess(b'{"token": "TOKEN"}', b"")
+        elif args == (["flyctl", "volumes", "list", "-a", "app", "--json"],):
+            return FakeCompletedProcess(b"[]", b"")
         else:
             print(args)
             return FakeCompletedProcess(b"", b"That app name is not available", 1)
@@ -57,9 +59,19 @@ def test_publish_fly_app_name_not_available(mock_run, mock_which, mock_graphql_r
         )
         assert 1 == result.exit_code
         assert "That app name is not available" in result.output
-        auth_token_call, apps_list_call, apps_create_call = mock_run.call_args_list
+        (
+            auth_token_call,
+            volumes_list_call,
+            apps_list_call,
+            apps_create_call,
+        ) = mock_run.call_args_list
         assert auth_token_call == mock.call(
             ["flyctl", "auth", "token", "--json"], stderr=PIPE, stdout=PIPE
+        )
+        assert volumes_list_call == mock.call(
+            ["flyctl", "volumes", "list", "-a", "app", "--json"],
+            stderr=PIPE,
+            stdout=PIPE,
         )
         assert apps_list_call == mock.call(
             ["flyctl", "apps", "list", "--json"], stdout=PIPE, stderr=PIPE
@@ -102,9 +114,9 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
 
         (
             auth_token_call,
+            volumes_list_call,
             apps_list_call,
             apps_create_call,
-            volumes_list_call,
             apps_deploy_call,
         ) = mock_run.call_args_list
         assert auth_token_call == mock.call(
@@ -167,7 +179,7 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
         (
             "myapp1",
             ["--create-volume", "1", "--create-db", "tiddlywiki"],
-            "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT",
+            "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT /data/*.db",
             "datasette",
             None,
         ),
@@ -181,7 +193,7 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
                 "--volume-name",
                 "custom_volume",
             ],
-            "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT",
+            "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT /data/*.db",
             "custom_volume",
             None,
         ),
@@ -344,6 +356,9 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
     assert result.exit_code == 0
     assert mock_run.call_args_list == [
         mock.call(["flyctl", "auth", "token", "--json"], stderr=-1, stdout=-1),
+        mock.call(
+            ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
+        ),
         mock.call(["flyctl", "apps", "list", "--json"], stdout=-1, stderr=-1),
         mock.call(
             ["flyctl", "apps", "create", "--name", "app", "--json"],
@@ -362,9 +377,6 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
             ],
             stderr=-1,
             stdout=-1,
-        ),
-        mock.call(
-            ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
         ),
         mock.call(
             [
@@ -452,12 +464,6 @@ def test_publish_fly_create_volume_ignored_if_volume_exists(
 
     expected = [
         mock.call(["flyctl", "auth", "token", "--json"], stderr=-1, stdout=-1),
-        mock.call(["flyctl", "apps", "list", "--json"], stdout=-1, stderr=-1),
-        mock.call(
-            ["flyctl", "apps", "create", "--name", "app", "--json"],
-            stderr=-1,
-            stdout=-1,
-        ),
         mock.call(
             ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
         ),
@@ -482,18 +488,26 @@ def test_publish_fly_create_volume_ignored_if_volume_exists(
                 stdout=-1,
             )
         )
-    expected.append(
-        mock.call(
-            [
-                "flyctl",
-                "deploy",
-                ".",
-                "--app",
-                "app",
-                "--config",
-                "fly.toml",
-                "--remote-only",
-            ]
-        )
+    expected.extend(
+        [
+            mock.call(["flyctl", "apps", "list", "--json"], stdout=-1, stderr=-1),
+            mock.call(
+                ["flyctl", "apps", "create", "--name", "app", "--json"],
+                stderr=-1,
+                stdout=-1,
+            ),
+            mock.call(
+                [
+                    "flyctl",
+                    "deploy",
+                    ".",
+                    "--app",
+                    "app",
+                    "--config",
+                    "fly.toml",
+                    "--remote-only",
+                ]
+            ),
+        ]
     )
     assert mock_run.call_args_list == expected
