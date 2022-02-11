@@ -27,7 +27,11 @@ def test_basic():
     app_name = APP_PREFIX + secrets.token_hex(4)
     with runner.isolated_filesystem():
         sqlite3.connect("test.db").execute("create table foo (id integer primary key)")
-        result = runner.invoke(cli.cli, ["publish", "fly", "test.db", "-a", app_name])
+        result = runner.invoke(
+            cli.cli,
+            ["publish", "fly", "test.db", "-a", app_name],
+            catch_exceptions=False,
+        )
         assert result.exit_code == 0, result.output
     # It should have been deployed - but Fly takes a while to start responding to https://...
     # url = "https://{}.fly.dev/.json".format(app_name)

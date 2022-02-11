@@ -100,7 +100,7 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
         elif args == (["flyctl", "auth", "token", "--json"],):
             return FakeCompletedProcess(b'{"token": "TOKEN"}', b"")
         elif args == (["flyctl", "volumes", "list", "-a", "app", "--json"],):
-            return FakeCompletedProcess(b"[]", b"")
+            return FakeCompletedProcess(b"", b"Could not resolve App", 1)
         else:
             print(args)
             return FakeCompletedProcess(b"", 0)

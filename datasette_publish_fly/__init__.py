@@ -355,6 +355,13 @@ def existing_volumes(app):
     process = run(
         ["flyctl", "volumes", "list", "-a", app, "--json"], stdout=PIPE, stderr=PIPE
     )
+    if process.returncode == 1:
+        if b"Could not resolve App" in process.stderr:
+            return []
+        else:
+            assert False, "flyctl volumes list error: {}".format(
+                process.stderr.decode("utf-8")
+            )
     return [volume["Name"] for volume in json.loads(process.stdout)]
 
 
