@@ -160,6 +160,33 @@ def publish_subcommand(publish):
             "about_url": about_url,
         }
 
+        if not generate_dir:
+            apps = existing_apps()
+            if app not in apps:
+                # Attempt to create the app
+                result = run(
+                    [
+                        "flyctl",
+                        "apps",
+                        "create",
+                        "--name",
+                        app,
+                        "--json",
+                    ],
+                    stderr=PIPE,
+                    stdout=PIPE,
+                )
+                if result.returncode:
+                    raise click.ClickException(
+                        "Error calling 'flyctl apps create':\n\n{}".format(
+                            # Don't include Usage: - could be confused for usage
+                            # instructions for datasette publish fly
+                            result.stderr.decode("utf-8")
+                            .split("Usage:")[0]
+                            .strip()
+                        )
+                    )
+
         volume_to_mount = None
 
         if create_volume and not generate_dir:
@@ -246,33 +273,6 @@ def publish_subcommand(publish):
                 assert lines[-1].startswith("CMD ")
                 lines[-1] += " /data/*.db"
                 open("Dockerfile", "w").write("\n".join(lines))
-
-            if not generate_dir:
-                apps = existing_apps()
-                if app not in apps:
-                    # Attempt to create the app
-                    result = run(
-                        [
-                            "flyctl",
-                            "apps",
-                            "create",
-                            "--name",
-                            app,
-                            "--json",
-                        ],
-                        stderr=PIPE,
-                        stdout=PIPE,
-                    )
-                    if result.returncode:
-                        raise click.ClickException(
-                            "Error calling 'flyctl apps create':\n\n{}".format(
-                                # Don't include Usage: - could be confused for usage
-                                # instructions for datasette publish fly
-                                result.stderr.decode("utf-8")
-                                .split("Usage:")[0]
-                                .strip()
-                            )
-                        )
 
             if secrets_to_set and not generate_dir:
                 secrets_args = ["flyctl", "secrets", "set"]
