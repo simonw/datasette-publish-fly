@@ -267,11 +267,17 @@ def publish_subcommand(publish):
             port=8080,
         ):
             if volume_to_mount:
-                # Modify CMD line of Dockerfile to add /data/*.db to end of it
+                # Modify CMD line of Dockerfile to use bash and add /data/*.db to end of it
                 dockerfile_content = open("Dockerfile").read().strip()
                 lines = dockerfile_content.split("\n")
                 assert lines[-1].startswith("CMD ")
-                lines[-1] += " /data/*.db"
+                new_line = lines[-1][len("CMD ") :] + " /data/*.db"
+                # Convert that to CMD ["/bin/bash","-c","shopt -s nullglob &&
+                # See https://github.com/simonw/datasette-publish-fly/issues/17
+                new_line = (
+                    'CMD ["/bin/bash", "-c", "shopt -s nullglob && ' + new_line + '"]\n'
+                )
+                lines[-1] = new_line
                 open("Dockerfile", "w").write("\n".join(lines))
 
             if secrets_to_set and not generate_dir:

@@ -173,7 +173,7 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
         (
             "myapp1",
             ["--create-volume", "1", "--create-db", "tiddlywiki"],
-            "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT /data/*.db",
+            'CMD ["/bin/bash", "-c", "shopt -s nullglob && datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT /data/*.db"]',
             "datasette",
             None,
         ),
@@ -187,7 +187,7 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
                 "--volume-name",
                 "custom_volume",
             ],
-            "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT /data/*.db",
+            'CMD ["/bin/bash", "-c", "shopt -s nullglob && datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json /data/tiddlywiki.db --create --port $PORT /data/*.db"]',
             "custom_volume",
             None,
         ),
