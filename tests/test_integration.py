@@ -74,7 +74,7 @@ def test_with_volume():
         assert result.exit_code == 0, result.output
     # These fragments are expected in Dockerfile or fly.toml or metadata.json
     fragments = (
-        "CMD datasette serve --host 0.0.0.0 -i test.db",
+        "datasette serve --host 0.0.0.0 -i test.db",
         "/data/writeme.db --create --port $PORT /data/*.db",
         'destination = "/data"\n  source = "datasette"',
         '"$env": "FOO_BAR"',
