@@ -41,7 +41,7 @@ Here's how to deploy `datasette-tiddlywiki` with authentication provided by `dat
 
 First, you'll need to create a root password hash to use to sign into the instance.
 
-You can [this hosted tool](https://datasette-auth-passwords-demo.datasette.io/-/password-tool) or run it yourself by starting Datasette with the `datasette-auth-passwords` plugin installed locally and using the tool at `http://localhost:8001/-/password-tool`.
+You can do that by installing the plugin and running the `datasette hash-password` command, or by using [this hosted tool](https://datasette-auth-passwords-demo.datasette.io/-/password-tool).
 
 The hash should look like `pbkdf2_sha256$...` - you'll need this for the next step.
 
