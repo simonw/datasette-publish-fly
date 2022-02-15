@@ -7,6 +7,8 @@
 
 [Datasette](https://datasette.io/) plugin for deploying Datasette instances to [Fly.io](https://fly.io/).
 
+Project background: [Using SQLite and Datasette with Fly Volumes](https://simonwillison.net/2022/Feb/15/fly-volumes/)
+
 ## Installation
 
 Install this plugin in the same environment as Datasette.
