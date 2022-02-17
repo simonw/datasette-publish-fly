@@ -39,6 +39,8 @@ Fly [Volumes](https://fly.io/docs/reference/volumes/) provide persistant disk st
 
 Datasette plugins such as [datasette-uploads-csvs](https://datasette.io/plugins/datasette-upload-csvs) and [datasette-tiddlywiki](https://datasette.io/plugins/datasette-tiddlywiki) can be deployed to Fly and store their mutable data in a volume.
 
+> :warning: **You should only run a single instance of your application** if your database accepts writes. Fly has excellent support for running multiple instances in different geographical regions, but `datasette-publish-fly` with volumes is not yet compatible with that model. You should probably [use Fly PostgreSQL instead](https://fly.io/blog/globally-distributed-postgres/).
+
 Here's how to deploy `datasette-tiddlywiki` with authentication provided by `datasette-auth-passwords`.
 
 First, you'll need to create a root password hash to use to sign into the instance.
