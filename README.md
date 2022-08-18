@@ -21,7 +21,7 @@ First, install the `flyctl` command-line tool by [following their instructions](
 
 Run `flyctl auth signup` to create an account there, or `flyctl auth login` if you already have one.
 
-You can now use `datasette publish fly` to publish your data:
+You can now use `datasette publish fly` to publish one or more SQLite database files:
 
     datasette publish fly my-database.db --app="my-data-app"
 
@@ -119,6 +119,15 @@ cog.out(
 ]]] -->
 ```
 Usage: datasette publish fly [OPTIONS] [FILES]...
+
+  Deploy an application to Fly that runs Datasette against the provided database
+  files.
+
+  Usage example:
+
+      datasette publish fly my-database.db --app="my-data-app"
+
+  Full documentation: https://datasette.io/plugins/datasette-publish-fly
 
 Options:
   -m, --metadata FILENAME         Path to JSON/YAML file containing metadata to

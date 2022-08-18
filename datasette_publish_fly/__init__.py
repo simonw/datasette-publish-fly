@@ -104,6 +104,15 @@ def publish_subcommand(publish):
         generate_dir,
         show_files,
     ):
+        """
+        Deploy an application to Fly that runs Datasette against the provided database files.
+
+        Usage example:
+
+            datasette publish fly my-database.db --app="my-data-app"
+
+        Full documentation: https://datasette.io/plugins/datasette-publish-fly
+        """
         fly_token = None
         if not generate_dir:
             # They must have flyctl installed
