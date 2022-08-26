@@ -260,11 +260,11 @@ def test_generate_directory(
         "\n"
         "  [[services.ports]]\n"
         '    handlers = ["http"]\n'
-        '    port = "80"\n'
+        '    port = 80\n'
         "\n"
         "  [[services.ports]]\n"
         '    handlers = ["tls", "http"]\n'
-        '    port = "443"\n'
+        '    port = 443\n'
         "\n"
         "  [[services.tcp_checks]]\n"
         "    interval = 10000\n"

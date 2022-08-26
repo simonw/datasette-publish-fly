@@ -27,11 +27,11 @@ app = "{app}"
 
   [[services.ports]]
     handlers = ["http"]
-    port = "80"
+    port = 80
 
   [[services.ports]]
     handlers = ["tls", "http"]
-    port = "443"
+    port = 443
 
   [[services.tcp_checks]]
     interval = 10000
