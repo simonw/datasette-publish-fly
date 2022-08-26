@@ -77,12 +77,24 @@ def test_publish_fly_app_name_not_available(mock_run, mock_which, mock_graphql_r
             "--name",
             "app",
             "--json",
+            "--org",
+            "personal",
         ]
 
 
 @mock.patch("shutil.which")
 @mock.patch("datasette_publish_fly.run")
-def test_publish_fly(mock_run, mock_which, mock_graphql_region):
+@pytest.mark.parametrize(
+    "extra_options,expected_create_args",
+    (
+        ([], ["--name", "app", "--json", "--org", "personal"]),
+        (["-o", "datasette"], ["--name", "app", "--json", "--org", "datasette"]),
+        (["--org", "datasette"], ["--name", "app", "--json", "--org", "datasette"]),
+    ),
+)
+def test_publish_fly(
+    mock_run, mock_which, mock_graphql_region, extra_options, expected_create_args
+):
     mock_which.return_value = True
     runner = CliRunner()
 
@@ -103,7 +115,9 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
 
     with runner.isolated_filesystem():
         open("test.db", "w").write("data")
-        result = runner.invoke(cli.cli, ["publish", "fly", "test.db", "-a", "app"])
+        result = runner.invoke(
+            cli.cli, ["publish", "fly", "test.db", "-a", "app"] + extra_options
+        )
         assert result.exit_code == 0, result.output
 
         (
@@ -119,14 +133,10 @@ def test_publish_fly(mock_run, mock_which, mock_graphql_region):
         assert apps_list_call == mock.call(
             ["flyctl", "apps", "list", "--json"], stdout=PIPE, stderr=PIPE
         )
-        assert list(apps_create_call)[0][0] == [
-            "flyctl",
-            "apps",
-            "create",
-            "--name",
-            "app",
-            "--json",
-        ]
+        assert (
+            list(apps_create_call)[0][0]
+            == ["flyctl", "apps", "create"] + expected_create_args
+        )
         assert volumes_list_call == mock.call(
             ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
         )
@@ -260,11 +270,11 @@ def test_generate_directory(
         "\n"
         "  [[services.ports]]\n"
         '    handlers = ["http"]\n'
-        '    port = 80\n'
+        "    port = 80\n"
         "\n"
         "  [[services.ports]]\n"
         '    handlers = ["tls", "http"]\n'
-        '    port = 443\n'
+        "    port = 443\n"
         "\n"
         "  [[services.tcp_checks]]\n"
         "    interval = 10000\n"
@@ -304,7 +314,18 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
     def run_side_effect(*args, **kwargs):
         if args == (["flyctl", "apps", "list", "--json"],):
             return FakeCompletedProcess(b"[]", b"")
-        elif args == (["flyctl", "apps", "create", "--name", "app", "--json"],):
+        elif args == (
+            [
+                "flyctl",
+                "apps",
+                "create",
+                "--name",
+                "app",
+                "--json",
+                "--org",
+                "personal",
+            ],
+        ):
             return FakeCompletedProcess(b"", b"")
         elif args == (["flyctl", "volumes", "list", "-a", "app", "--json"],):
             return FakeCompletedProcess(b"[]", b"")
@@ -352,7 +373,16 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
         mock.call(["flyctl", "auth", "token", "--json"], stderr=-1, stdout=-1),
         mock.call(["flyctl", "apps", "list", "--json"], stdout=-1, stderr=-1),
         mock.call(
-            ["flyctl", "apps", "create", "--name", "app", "--json"],
+            [
+                "flyctl",
+                "apps",
+                "create",
+                "--name",
+                "app",
+                "--json",
+                "--org",
+                "personal",
+            ],
             stderr=-1,
             stdout=-1,
         ),
@@ -401,7 +431,18 @@ def test_publish_fly_create_volume_ignored_if_volume_exists(
             return FakeCompletedProcess(b'{"token": "TOKEN"}', b"")
         elif args == (["flyctl", "apps", "list", "--json"],):
             return FakeCompletedProcess(b"[]", b"")
-        elif args == (["flyctl", "apps", "create", "--name", "app", "--json"],):
+        elif args == (
+            [
+                "flyctl",
+                "apps",
+                "create",
+                "--name",
+                "app",
+                "--json",
+                "--org",
+                "personal",
+            ],
+        ):
             return FakeCompletedProcess(b"", b"")
         elif args == (["flyctl", "volumes", "list", "-a", "app", "--json"],):
             if volume_exists:
@@ -460,7 +501,16 @@ def test_publish_fly_create_volume_ignored_if_volume_exists(
         mock.call(["flyctl", "auth", "token", "--json"], stderr=-1, stdout=-1),
         mock.call(["flyctl", "apps", "list", "--json"], stdout=-1, stderr=-1),
         mock.call(
-            ["flyctl", "apps", "create", "--name", "app", "--json"],
+            [
+                "flyctl",
+                "apps",
+                "create",
+                "--name",
+                "app",
+                "--json",
+                "--org",
+                "personal",
+            ],
             stderr=-1,
             stdout=-1,
         ),

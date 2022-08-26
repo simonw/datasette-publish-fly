@@ -67,6 +67,12 @@ def publish_subcommand(publish):
         required=True,
     )
     @click.option(
+        "-o",
+        "--org",
+        help="Name of Fly org to deploy to",
+        default="personal",
+    )
+    @click.option(
         "--generate-dir",
         type=click.Path(dir_okay=True, file_okay=False),
         help="Output generated application files and stop without deploying",
@@ -101,6 +107,7 @@ def publish_subcommand(publish):
         create_db,
         volume_name,
         app,
+        org,
         generate_dir,
         show_files,
     ):
@@ -173,18 +180,17 @@ def publish_subcommand(publish):
             apps = existing_apps()
             if app not in apps:
                 # Attempt to create the app
-                result = run(
-                    [
-                        "flyctl",
-                        "apps",
-                        "create",
-                        "--name",
-                        app,
-                        "--json",
-                    ],
-                    stderr=PIPE,
-                    stdout=PIPE,
-                )
+                args = [
+                    "flyctl",
+                    "apps",
+                    "create",
+                    "--name",
+                    app,
+                    "--json",
+                ]
+                if org:
+                    args.extend(["--org", org])
+                result = run(args, stderr=PIPE, stdout=PIPE)
                 if result.returncode:
                     raise click.ClickException(
                         "Error calling 'flyctl apps create':\n\n{}".format(
