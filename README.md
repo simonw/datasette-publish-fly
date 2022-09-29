@@ -161,6 +161,7 @@ Options:
   --create-db TEXT                Names of read-write database files to create
   --volume-name TEXT              Volume name to use
   -a, --app TEXT                  Name of Fly app to deploy  [required]
+  -o, --org TEXT                  Name of Fly org to deploy to
   --generate-dir DIRECTORY        Output generated application files and stop
                                   without deploying
   --show-files                    Output the generated Dockerfile, metadata.json
