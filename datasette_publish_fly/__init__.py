@@ -353,7 +353,7 @@ def publish_subcommand(publish):
 
             open("fly.toml", "w").write(fly_toml)
             # Now deploy it
-            run(
+            deploy_result = run(
                 [
                     "flyctl",
                     "deploy",
@@ -365,6 +365,8 @@ def publish_subcommand(publish):
                     "--remote-only",
                 ]
             )
+            if deploy_result.returncode:
+                raise click.ClickException("Error calling 'flyctl deploy'")
 
 
 def existing_apps():
