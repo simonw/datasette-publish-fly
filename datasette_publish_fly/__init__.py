@@ -121,6 +121,11 @@ def publish_subcommand(publish):
         Full documentation: https://datasette.io/plugins/datasette-publish-fly
         """
         fly_token = None
+
+        # Ensure generate_dir is an absolute, not relative path
+        if generate_dir:
+            generate_dir = str(pathlib.Path(generate_dir).absolute())
+
         if not generate_dir:
             # They must have flyctl installed
             fail_if_publish_binary_not_installed(
