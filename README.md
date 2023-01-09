@@ -166,6 +166,9 @@ Options:
                                   without deploying
   --show-files                    Output the generated Dockerfile, metadata.json
                                   and fly.toml
+  --setting SETTING...            Setting, see
+                                  docs.datasette.io/en/stable/settings.html
+  --crossdb                       Enable cross-database SQL queries
   --help                          Show this message and exit.
 ```
 <!-- [[[end]]] -->

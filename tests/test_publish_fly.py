@@ -174,6 +174,13 @@ def test_publish_fly(
             ["database.db"],
         ),
         (
+            "myapp_custom_settings",
+            ["database.db", "--crossdb", "--setting", "default_page_size", "10"],
+            "CMD datasette serve --host 0.0.0.0 -i database.db --cors --inspect-file inspect-data.json --setting default_page_size 10 --crossdb --port $PORT",
+            None,
+            ["database.db"],
+        ),
+        (
             "myapp2",
             ["database.db", "-m", "metadata.json"],
             "CMD datasette serve --host 0.0.0.0 -i database.db --cors --inspect-file inspect-data.json --metadata metadata.json --port $PORT",

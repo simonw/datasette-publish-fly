@@ -7,6 +7,7 @@ from datasette.publish.common import (
 from datasette.utils import temporary_docker_directory
 from subprocess import run, PIPE
 import click
+from click.types import CompositeParamType
 import httpx
 import json
 import os
@@ -37,6 +38,41 @@ app = "{app}"
     interval = 10000
     timeout = 2000
 """
+
+
+class Setting(CompositeParamType):
+    name = "setting"
+    arity = 2
+
+    def convert(self, config, param, ctx):
+        from datasette.app import DEFAULT_SETTINGS
+
+        name, value = config
+        if name not in DEFAULT_SETTINGS:
+            self.fail(
+                f"{name} is not a valid option (--help-config to see all)",
+                param,
+                ctx,
+            )
+            return
+        # Type checking
+        default = DEFAULT_SETTINGS[name]
+        if isinstance(default, bool):
+            try:
+                return name, value_as_boolean(value)
+            except ValueAsBooleanError:
+                self.fail(f'"{name}" should be on/off/true/false/1/0', param, ctx)
+                return
+        elif isinstance(default, int):
+            if not value.isdigit():
+                self.fail(f'"{name}" should be an integer', param, ctx)
+                return
+            return name, int(value)
+        elif isinstance(default, str):
+            return name, value
+        else:
+            # Should never happen:
+            self.fail("Invalid option")
 
 
 @hookimpl
@@ -82,6 +118,14 @@ def publish_subcommand(publish):
         is_flag=True,
         help="Output the generated Dockerfile, metadata.json and fly.toml",
     )
+    @click.option(
+        "--setting",
+        "settings",
+        type=Setting(),
+        help="Setting, see docs.datasette.io/en/stable/settings.html",
+        multiple=True,
+    )
+    @click.option("--crossdb", is_flag=True, help="Enable cross-database SQL queries")
     def fly(
         files,
         metadata,
@@ -110,6 +154,8 @@ def publish_subcommand(publish):
         org,
         generate_dir,
         show_files,
+        settings,
+        crossdb,
     ):
         """
         Deploy an application to Fly that runs Datasette against the provided database files.
@@ -248,6 +294,12 @@ def publish_subcommand(publish):
                 volume_to_mount = volumes[0]
 
         extra_options = extra_options or ""
+        if settings:
+            extra_options += " ".join(
+                "--setting {} {}".format(*setting) for setting in settings
+            )
+        if crossdb:
+            extra_options += " --crossdb"
         if volume_to_mount:
             for database_name in create_db:
                 if not database_name.endswith(".db"):
