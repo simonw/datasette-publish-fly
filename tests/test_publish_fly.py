@@ -346,7 +346,16 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
                 b"", b"No change detected to secrets", returncode=1
             )
         elif args == (
-            ['flyctl', 'deploy', '.', '--app', 'app', '--config', 'fly.toml', '--remote-only'],
+            [
+                "flyctl",
+                "deploy",
+                ".",
+                "--app",
+                "app",
+                "--config",
+                "fly.toml",
+                "--remote-only",
+            ],
         ):
             # Deploy succeeds
             return FakeCompletedProcess(b"", b"")
@@ -480,7 +489,16 @@ def test_publish_fly_create_volume_ignored_if_volume_exists(
         ):
             return FakeCompletedProcess(b"", b"")
         elif args == (
-            ['flyctl', 'deploy', '.', '--app', 'app', '--config', 'fly.toml', '--remote-only'],
+            [
+                "flyctl",
+                "deploy",
+                ".",
+                "--app",
+                "app",
+                "--config",
+                "fly.toml",
+                "--remote-only",
+            ],
         ):
             # Deploy succeeds
             return FakeCompletedProcess(b"", b"")
