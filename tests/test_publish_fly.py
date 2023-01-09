@@ -208,6 +208,13 @@ def test_publish_fly(
             "custom_volume",
             None,
         ),
+        (
+            "with_plugins_dir",
+            ["--plugins-dir", "plugins"],
+            "CMD datasette serve --host 0.0.0.0 --cors --inspect-file inspect-data.json --plugins-dir plugins/ --port $PORT",
+            None,
+            ["plugins/foo.py"],
+        ),
     ),
 )
 def test_generate_directory(
@@ -245,16 +252,25 @@ def test_generate_directory(
         (input_directory / "metadata.json").write_text(
             '{"title": "Metadata title"}', "utf-8"
         )
-    result = runner.invoke(
-        cli.cli,
-        ["publish", "fly", "-a", app_name, "--generate-dir", str(output_directory)]
-        + opts,
-        catch_exceptions=False,
-    )
-    assert result.exit_code == 0, result.output
+    (input_directory / "plugins").mkdir()
+    (input_directory / "plugins" / "foo.py").write_text("import datasette", "utf-8")
+    if opts == ["--plugins-dir", "plugins"]:
+        opts = ["--plugins-dir", str(input_directory / "plugins")]
+    with runner.isolated_filesystem(input_directory):
+        result = runner.invoke(
+            cli.cli,
+            ["publish", "fly", "-a", app_name, "--generate-dir", str(output_directory)]
+            + opts,
+            catch_exceptions=False,
+        )
+        assert result.exit_code == 0, result.output
 
-    filenames = [p.name for p in pathlib.Path(output_directory).glob("*")]
-    assert set(filenames) == set(expected_files)
+    filenames = {
+        str(p.relative_to(output_directory))
+        for p in pathlib.Path(output_directory).glob("**/*")
+        if p.is_file()
+    }
+    assert filenames == set(expected_files)
 
     fly_toml = (output_directory / "fly.toml").read_text("utf-8")
     dockerfile = (output_directory / "Dockerfile").read_text("utf-8")

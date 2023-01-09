@@ -389,7 +389,10 @@ def publish_subcommand(publish):
 
                 # Copy files from current directory to dir
                 for file in pathlib.Path(".").glob("*"):
-                    shutil.copy(str(file), str(dir / file.name))
+                    if file.is_dir():
+                        shutil.copytree(str(file), str(dir / file.name))
+                    else:
+                        shutil.copy(str(file), str(dir / file.name))
                 (dir / "fly.toml").write_text(fly_toml, "utf-8")
                 return
 
