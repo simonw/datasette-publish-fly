@@ -4,7 +4,11 @@ from datasette.publish.common import (
     add_common_publish_arguments_and_options,
     fail_if_publish_binary_not_installed,
 )
-from datasette.utils import temporary_docker_directory
+from datasette.utils import (
+    temporary_docker_directory,
+    value_as_boolean,
+    ValueAsBooleanError,
+)
 from subprocess import run, PIPE
 import click
 from click.types import CompositeParamType
