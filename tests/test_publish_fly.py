@@ -362,7 +362,6 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
                 "DATASETTE_AUTH_PASSWORDS_ROOT_PASSWORD_HASH=root",
                 "-a",
                 "app",
-                "--json",
             ],
         ):
             return FakeCompletedProcess(
@@ -433,7 +432,6 @@ def test_publish_fly_create_plugin_secret(mock_run, mock_which):
                 "DATASETTE_AUTH_PASSWORDS_ROOT_PASSWORD_HASH=root",
                 "-a",
                 "app",
-                "--json",
             ],
             stderr=-1,
             stdout=-1,
