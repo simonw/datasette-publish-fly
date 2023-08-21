@@ -360,7 +360,7 @@ def publish_subcommand(publish):
                 secrets_args = ["flyctl", "secrets", "set"]
                 for pair in secrets_to_set.items():
                     secrets_args.append("{}={}".format(*pair))
-                secrets_args.extend(["-a", app, "--json"])
+                secrets_args.extend(["-a", app])
                 secrets_result = run(
                     secrets_args,
                     stderr=PIPE,
