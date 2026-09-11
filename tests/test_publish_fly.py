@@ -294,6 +294,7 @@ def test_generate_directory(
         "  [[services.ports]]\n"
         '    handlers = ["http"]\n'
         "    port = 80\n"
+        "    force_https = true\n"
         "\n"
         "  [[services.ports]]\n"
         '    handlers = ["tls", "http"]\n'
