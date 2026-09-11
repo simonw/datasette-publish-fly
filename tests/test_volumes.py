@@ -25,5 +25,7 @@ def test_existing_volumes_reports_errors(returncode, mocker):
         "datasette_publish_fly.run",
         return_value=CompletedProcess([], returncode, b"", b"Error: unauthorized"),
     )
-    with pytest.raises(click.ClickException, match="(?s)flyctl volumes list.*unauthorized"):
+    with pytest.raises(
+        click.ClickException, match="(?s)flyctl volumes list.*unauthorized"
+    ):
         existing_volumes("app")

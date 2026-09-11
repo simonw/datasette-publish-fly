@@ -95,8 +95,13 @@ def test_publish_fly_app_name_not_available(
     ),
 )
 def test_publish_fly(
-    mock_run, mock_which, mock_graphql_region, extra_options, expected_create_args,
-    tmp_path, monkeypatch,
+    mock_run,
+    mock_which,
+    mock_graphql_region,
+    extra_options,
+    expected_create_args,
+    tmp_path,
+    monkeypatch,
 ):
     mock_which.return_value = True
     runner = CliRunner()

@@ -18,7 +18,6 @@ import os
 import pathlib
 import shutil
 
-
 FLY_TOML = """
 app = "{app}"
 {mounts}
