@@ -23,19 +23,21 @@ def mock_graphql_region(mocker):
 
 
 @mock.patch("shutil.which")
-def test_publish_fly_requires_flyctl(mock_which):
+def test_publish_fly_requires_flyctl(mock_which, tmp_path, monkeypatch):
     mock_which.return_value = False
     runner = CliRunner()
-    with runner.isolated_filesystem():
-        open("test.db", "w").write("data")
-        result = runner.invoke(cli.cli, ["publish", "fly", "test.db", "-a", "app"])
-        assert result.exit_code == 1
-        assert "Publishing to Fly requires flyctl" in result.output
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "test.db").write_text("data")
+    result = runner.invoke(cli.cli, ["publish", "fly", "test.db", "-a", "app"])
+    assert result.exit_code == 1
+    assert "Publishing to Fly requires flyctl" in result.output
 
 
 @mock.patch("shutil.which")
 @mock.patch("datasette_publish_fly.run")
-def test_publish_fly_app_name_not_available(mock_run, mock_which, mock_graphql_region):
+def test_publish_fly_app_name_not_available(
+    mock_run, mock_which, mock_graphql_region, tmp_path, monkeypatch
+):
     mock_which.return_value = True
     runner = CliRunner()
 
@@ -52,34 +54,34 @@ def test_publish_fly_app_name_not_available(mock_run, mock_which, mock_graphql_r
 
     mock_run.side_effect = run_side_effect
 
-    with runner.isolated_filesystem():
-        open("test.db", "w").write("data")
-        result = runner.invoke(
-            cli.cli, ["publish", "fly", "test.db", "-a", "app"], catch_exceptions=False
-        )
-        assert 1 == result.exit_code
-        assert "That app name is not available" in result.output
-        (
-            auth_token_call,
-            app_status_call,
-            apps_create_call,
-        ) = mock_run.call_args_list
-        assert auth_token_call == mock.call(
-            ["flyctl", "auth", "token", "--json"], stderr=PIPE, stdout=PIPE
-        )
-        assert app_status_call == mock.call(
-            ["flyctl", "status", "--app", "app", "--json"], stdout=PIPE, stderr=PIPE
-        )
-        assert list(apps_create_call)[0][0] == [
-            "flyctl",
-            "apps",
-            "create",
-            "--name",
-            "app",
-            "--json",
-            "--org",
-            "personal",
-        ]
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "test.db").write_text("data")
+    result = runner.invoke(
+        cli.cli, ["publish", "fly", "test.db", "-a", "app"], catch_exceptions=False
+    )
+    assert 1 == result.exit_code
+    assert "That app name is not available" in result.output
+    (
+        auth_token_call,
+        app_status_call,
+        apps_create_call,
+    ) = mock_run.call_args_list
+    assert auth_token_call == mock.call(
+        ["flyctl", "auth", "token", "--json"], stderr=PIPE, stdout=PIPE
+    )
+    assert app_status_call == mock.call(
+        ["flyctl", "status", "--app", "app", "--json"], stdout=PIPE, stderr=PIPE
+    )
+    assert list(apps_create_call)[0][0] == [
+        "flyctl",
+        "apps",
+        "create",
+        "--name",
+        "app",
+        "--json",
+        "--org",
+        "personal",
+    ]
 
 
 @mock.patch("shutil.which")
@@ -93,7 +95,8 @@ def test_publish_fly_app_name_not_available(mock_run, mock_which, mock_graphql_r
     ),
 )
 def test_publish_fly(
-    mock_run, mock_which, mock_graphql_region, extra_options, expected_create_args
+    mock_run, mock_which, mock_graphql_region, extra_options, expected_create_args,
+    tmp_path, monkeypatch,
 ):
     mock_which.return_value = True
     runner = CliRunner()
@@ -113,45 +116,45 @@ def test_publish_fly(
 
     mock_run.side_effect = run_side_effect
 
-    with runner.isolated_filesystem():
-        open("test.db", "w").write("data")
-        result = runner.invoke(
-            cli.cli, ["publish", "fly", "test.db", "-a", "app"] + extra_options
-        )
-        assert result.exit_code == 0, result.output
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "test.db").write_text("data")
+    result = runner.invoke(
+        cli.cli, ["publish", "fly", "test.db", "-a", "app"] + extra_options
+    )
+    assert result.exit_code == 0, result.output
 
-        (
-            auth_token_call,
-            app_status_call,
-            apps_create_call,
-            volumes_list_call,
-            apps_deploy_call,
-        ) = mock_run.call_args_list
-        assert auth_token_call == mock.call(
-            ["flyctl", "auth", "token", "--json"], stderr=PIPE, stdout=PIPE
-        )
-        assert app_status_call == mock.call(
-            ["flyctl", "status", "--app", "app", "--json"], stdout=PIPE, stderr=PIPE
-        )
-        assert (
-            list(apps_create_call)[0][0]
-            == ["flyctl", "apps", "create"] + expected_create_args
-        )
-        assert volumes_list_call == mock.call(
-            ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
-        )
-        assert apps_deploy_call == mock.call(
-            [
-                "flyctl",
-                "deploy",
-                ".",
-                "--app",
-                "app",
-                "--config",
-                "fly.toml",
-                "--remote-only",
-            ]
-        )
+    (
+        auth_token_call,
+        app_status_call,
+        apps_create_call,
+        volumes_list_call,
+        apps_deploy_call,
+    ) = mock_run.call_args_list
+    assert auth_token_call == mock.call(
+        ["flyctl", "auth", "token", "--json"], stderr=PIPE, stdout=PIPE
+    )
+    assert app_status_call == mock.call(
+        ["flyctl", "status", "--app", "app", "--json"], stdout=PIPE, stderr=PIPE
+    )
+    assert (
+        list(apps_create_call)[0][0]
+        == ["flyctl", "apps", "create"] + expected_create_args
+    )
+    assert volumes_list_call == mock.call(
+        ["flyctl", "volumes", "list", "-a", "app", "--json"], stdout=-1, stderr=-1
+    )
+    assert apps_deploy_call == mock.call(
+        [
+            "flyctl",
+            "deploy",
+            ".",
+            "--app",
+            "app",
+            "--config",
+            "fly.toml",
+            "--remote-only",
+        ]
+    )
 
 
 @mock.patch("shutil.which")
@@ -221,6 +224,7 @@ def test_generate_directory(
     mock_run,
     mock_which,
     tmp_path_factory,
+    monkeypatch,
     app_name,
     opts,
     expected_cmd,
@@ -256,14 +260,14 @@ def test_generate_directory(
     (input_directory / "plugins" / "foo.py").write_text("import datasette", "utf-8")
     if opts == ["--plugins-dir", "plugins"]:
         opts = ["--plugins-dir", str(input_directory / "plugins")]
-    with runner.isolated_filesystem(input_directory):
-        result = runner.invoke(
-            cli.cli,
-            ["publish", "fly", "-a", app_name, "--generate-dir", str(output_directory)]
-            + opts,
-            catch_exceptions=False,
-        )
-        assert result.exit_code == 0, result.output
+    monkeypatch.chdir(input_directory)
+    result = runner.invoke(
+        cli.cli,
+        ["publish", "fly", "-a", app_name, "--generate-dir", str(output_directory)]
+        + opts,
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0, result.output
 
     filenames = {
         str(p.relative_to(output_directory))
