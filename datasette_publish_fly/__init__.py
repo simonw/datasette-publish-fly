@@ -343,7 +343,9 @@ def publish_subcommand(publish):
         ):
             if volume_to_mount:
                 # Modify CMD line of Dockerfile to use bash and add /data/*.db to end of it
-                dockerfile_content = open("Dockerfile").read().strip()
+                dockerfile_content = (
+                    pathlib.Path("Dockerfile").read_text("utf-8").strip()
+                )
                 lines = dockerfile_content.split("\n")
                 assert lines[-1].startswith("CMD ")
                 new_line = lines[-1][len("CMD ") :] + " /data/*.db"
@@ -353,7 +355,7 @@ def publish_subcommand(publish):
                     'CMD ["/bin/bash", "-c", "shopt -s nullglob && ' + new_line + '"]\n'
                 )
                 lines[-1] = new_line
-                open("Dockerfile", "w").write("\n".join(lines))
+                pathlib.Path("Dockerfile").write_text("\n".join(lines), "utf-8")
 
             if secrets_to_set and not generate_dir:
                 secrets_args = ["flyctl", "secrets", "set"]
@@ -406,15 +408,15 @@ def publish_subcommand(publish):
                 click.echo("----")
                 click.echo("Dockerfile")
                 click.echo("----")
-                click.echo(open("Dockerfile").read())
+                click.echo(pathlib.Path("Dockerfile").read_text("utf-8"))
                 if os.path.exists("metadata.json"):
                     click.echo("----")
                     click.echo("metadata.json")
                     click.echo("----")
-                    click.echo(open("metadata.json").read())
+                    click.echo(pathlib.Path("metadata.json").read_text("utf-8"))
                     click.echo("----")
 
-            open("fly.toml", "w").write(fly_toml)
+            pathlib.Path("fly.toml").write_text(fly_toml, "utf-8")
             # Now deploy it
             deploy_result = run(
                 [
