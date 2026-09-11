@@ -450,14 +450,15 @@ def existing_volumes(app):
     process = run(
         ["flyctl", "volumes", "list", "-a", app, "--json"], stdout=PIPE, stderr=PIPE
     )
-    if process.returncode == 1:
+    if process.returncode:
         if b"Could not resolve App" in process.stderr:
             return []
-        else:
-            assert False, "flyctl volumes list error: {}".format(
-                process.stderr.decode("utf-8")
+        raise click.ClickException(
+            "Error calling 'flyctl volumes list':\n\n{}".format(
+                process.stderr.decode("utf-8", errors="replace").strip()
             )
-    return [volume["Name"] for volume in json.loads(process.stdout)]
+        )
+    return [volume["name"] for volume in json.loads(process.stdout)]
 
 
 def validate_database_name(ctx, param, value):

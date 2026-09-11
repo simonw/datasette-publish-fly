@@ -486,7 +486,7 @@ def test_publish_fly_create_volume_ignored_if_volume_exists(
                         [
                             {
                                 "id": "vol_wod56vj56dm4ny30",
-                                "Name": "datasette",
+                                "name": "datasette",
                             }
                         ]
                     ).encode("utf-8"),
