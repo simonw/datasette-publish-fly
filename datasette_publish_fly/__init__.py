@@ -232,8 +232,7 @@ def publish_subcommand(publish):
         }
 
         if not generate_dir:
-            apps = existing_apps()
-            if app not in apps:
+            if not app_exists(app):
                 # Attempt to create the app
                 args = [
                     "flyctl",
@@ -433,9 +432,17 @@ def publish_subcommand(publish):
                 raise click.ClickException("Error calling 'flyctl deploy'")
 
 
-def existing_apps():
-    process = run(["flyctl", "apps", "list", "--json"], stdout=PIPE, stderr=PIPE)
-    return [app["Name"] for app in json.loads(process.stdout)]
+def app_exists(app):
+    # App-scoped deploy tokens can access this app but cannot list all apps.
+    process = run(
+        ["flyctl", "status", "--app", app, "--json"], stdout=PIPE, stderr=PIPE
+    )
+    if process.returncode == 0:
+        return True
+    error = process.stderr.decode("utf-8", errors="replace").strip()
+    if 'Could not find App "{}"'.format(app) in error:
+        return False
+    raise click.ClickException("Error calling 'flyctl status':\n\n{}".format(error))
 
 
 def existing_volumes(app):
